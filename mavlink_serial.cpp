@@ -303,17 +303,20 @@ int serial_wait(int serial_fd)
 
 			switch (message.msgid)
 			{
-				case MAVLINK_MSG_ID_SCALED_IMU:
+				case MAVLINK_MSG_ID_HIGHRES_IMU:
 				{
 					if (scaled_imu_receive_counter % 50 == 0)
 					{
-						mavlink_scaled_imu_t imu;
-						mavlink_msg_scaled_imu_decode(&message, &imu);
+						mavlink_highres_imu_t imu;
+						mavlink_msg_highres_imu_decode(&message, &imu);
 
-						printf("Got message SCALED_IMU (spec: https://pixhawk.ethz.ch/mavlink/#SCALED_IMU)\n");
-						printf("\t acc  (NED):\t% 5d\t% 5d\t% 5d\n", imu.xacc, imu.yacc, imu.zacc);
-						printf("\t gyro (NED):\t% 5d\t% 5d\t% 5d\n", imu.xgyro, imu.ygyro, imu.zgyro);
-						printf("\t mag  (NED):\t% 5d\t% 5d\t% 5d\n", imu.xmag, imu.ymag, imu.zmag);
+						printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
+						printf("\t acc  (NED):\t% f\t% f\t% f (m/s^2)\n", imu.xacc, imu.yacc, imu.zacc);
+						printf("\t gyro (NED):\t% f\t% f\t% f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+						printf("\t mag  (NED):\t% f\t% f\t% f (Ga)\n", imu.xmag, imu.ymag, imu.zmag);
+						printf("\t baro: \t %f (mBar)\n", imu.abs_pressure);
+						printf("\t altitude: \t %f (m)\n", imu.pressure_alt);
+						printf("\t temperature: \t %f C\n", imu.temperature);
 						printf("\n");
 					}
 					scaled_imu_receive_counter++;

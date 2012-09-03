@@ -1,2 +1,3 @@
 *.o
 mavlink_serial
+.DS_Store
