@@ -20,6 +20,7 @@
 #include <cmath>
 #include <string.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <fstream>
 // Serial includes
 #include <stdio.h>   /* Standard input/output definitions */
@@ -31,10 +32,23 @@
 #ifdef __linux
 #include <sys/ioctl.h>
 #endif
+#include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
 
 // Latency Benchmarking
 #include <sys/time.h>
 #include <time.h>
+
+#ifndef INT16_MAX
+#define INT16_MAX 0x7fff
+#endif
+#ifndef INT16_MIN
+#define INT16_MIN (-INT16_MAX - 1)
+#endif
+#ifndef UINT16_MAX
+#define UINT16_MAX 0xffff
+#endif
 
 using std::string;
 using namespace std;
@@ -49,6 +63,13 @@ bool silent = false;              ///< Wether console output should be enabled
 bool verbose = false;             ///< Enable verbose output
 bool debug = false;               ///< Enable debug functions and output
 int fd;
+
+void quit_handler(int sig);
+
+void quit_handler(int sig) {
+	printf("Exiting on user request.\n");
+	exit(0);
+}
 
 /**
  *
@@ -71,7 +92,10 @@ int open_port(const char* port)
 	}
 	else
 	{
-		fcntl(fd, F_SETFL, 0);
+		/* Set to blocking mode */
+		//fcntl(fd, F_SETFL, 0);
+		/* set to non-blocking mode */
+		fcntl(fd, F_SETFL, FNDELAY);
 	}
 	
 	return (fd);
@@ -124,6 +148,10 @@ bool setup_port(int fd, int baud, int data_bits, int stop_bits, bool parity, boo
 	//
 	config.c_cflag &= ~(CSIZE | PARENB);
 	config.c_cflag |= CS8;
+
+	/* turn off hardware flow control */
+	//config.c_cflag &= ~RTSCTS;
+
 	//
 	// One input byte is enough to return from read()
 	// Inter-character timer off
@@ -226,7 +254,7 @@ void close_port(int fd)
 /**
  * @brief Serial function
  *
- * This function blocks waiting for serial data in it's own thread
+ * This function sends data out
  * and forwards the data once received.
  */
 int serial_send(int serial_fd)
@@ -261,7 +289,10 @@ int serial_send(int serial_fd)
 		/* send from system 200 and component 0 */
 		mavlink_msg_set_quad_swarm_roll_pitch_yaw_thrust_encode(200, 0, &message, &sp);
 		unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
-		write(fd, buf, len);
+		printf("before write\n");
+		write(fd, buf, 1);
+		tcflush(fd, TCOFLUSH);
+		printf("after write\n");
 
 		if (loopcounter % 100 == 0) {
 			printf("Sent %d packets\n", loopcounter);
@@ -321,6 +352,9 @@ int main(int argc, char **argv) {
 			debug = true;
 		}
 	}
+
+	/* setup CTRL-C handling */
+	signal(SIGINT,quit_handler);
 
 	// SETUP SERIAL PORT
 
