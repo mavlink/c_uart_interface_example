@@ -108,9 +108,9 @@ bool setup_port(int fd, int baud, int data_bits, int stop_bits, bool parity, boo
 	// no Ctrl-D suppression, no fill characters, no case mapping,
 	// no local output processing
 	//
-	// config.c_oflag &= ~(OCRNL | ONLCR | ONLRET |
-	//                     ONOCR | ONOEOT| OFILL | OLCUC | OPOST);
-	config.c_oflag = 0;
+	config.c_oflag &= ~(OCRNL | ONLCR | ONLRET |
+	                     ONOCR | ONOEOT| OFILL | OLCUC | OPOST);
+
 	//
 	// No line processing:
 	// echo off, echo newline off, canonical mode off,
