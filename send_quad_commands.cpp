@@ -49,7 +49,7 @@
 #ifndef UINT16_MAX
 #define UINT16_MAX 0xffff
 #endif
-#define ONOEOT 0x00000008
+
 using std::string;
 using namespace std;
 
@@ -133,7 +133,16 @@ bool setup_port(int fd, int baud, int data_bits, int stop_bits, bool parity, boo
 	// no local output processing
 	//
 	config.c_oflag &= ~(OCRNL | ONLCR | ONLRET |
-	                    ONOCR | ONOEOT| OFILL | OLCUC | OPOST);
+	                    ONOCR | OFILL | OPOST);
+
+	#ifdef OLCUC 
+  		config.c_oflag &= ~OLCUC; 
+	#endif
+
+  	#ifdef ONOEOT
+  		config.c_oflag &= ~ONOEOT;
+  	#endif
+
 
 	//
 	// No line processing:
