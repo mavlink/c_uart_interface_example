@@ -49,15 +49,15 @@
 #ifndef UINT16_MAX
 #define UINT16_MAX 0xffff
 #endif
-
+#define ONOEOT 0x00000008
 using std::string;
 using namespace std;
 
 struct timeval tv;		  ///< System time
 
 // Settings
-int sysid = 42;             ///< The unique system id of this MAV, 0-127. Has to be consistent across the system
-int compid = 110;
+int sysid = 1;             ///< The unique system id of this MAV, 0-127. Has to be consistent across the system
+int compid = 50;
 int serial_compid = 0;
 bool silent = false;              ///< Wether console output should be enabled
 bool verbose = false;             ///< Enable verbose output
@@ -150,7 +150,7 @@ bool setup_port(int fd, int baud, int data_bits, int stop_bits, bool parity, boo
 	config.c_cflag |= CS8;
 
 	/* turn off hardware flow control */
-	config.c_cflag &= ~RTSCTS;
+	config.c_cflag &= ~CRTSCTS;
 
 	//
 	// One input byte is enough to return from read()
@@ -278,7 +278,7 @@ int serial_send(int serial_fd)
 		sp.group = 0;
 
 		/* set rate mode, set zero rates and 20% throttle */
-		sp.mode = MAVLINK_OFFBOARD_CONTROL_MODE_RATES | MAVLINK_OFFBOARD_CONTROL_FLAG_ARMED;
+		sp.mode = MAVLINK_OFFBOARD_CONTROL_MODE_RATES;
 
 		sp.roll[0] = INT16_MAX * 0.0f;
 		sp.pitch[0] = INT16_MAX * 0.0f;
@@ -290,7 +290,7 @@ int serial_send(int serial_fd)
 		mavlink_msg_set_quad_swarm_roll_pitch_yaw_thrust_encode(200, 0, &message, &sp);
 		unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
 		printf("before write\n");
-		write(fd, buf, 1);
+		write(fd, buf, len);
 		tcflush(fd, TCOFLUSH);
 		printf("after write\n");
 
