@@ -247,7 +247,7 @@ int serial_wait(int serial_fd)
 		mavlink_message_t message;
 		mavlink_status_t status;
 		uint8_t msgReceived = false;
-		//tcflush(fd, TCIFLUSH);
+
 		if (read(fd, &cp, 1) > 0)
 		{
 			// Check if a message could be decoded, return the message in case yes

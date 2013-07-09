@@ -258,7 +258,6 @@ void close_port(int fd)
 #define MAVLINK_OFFBOARD_CONTROL_MODE_ATTITUDE 2
 #define MAVLINK_OFFBOARD_CONTROL_MODE_VELOCITY 3
 #define MAVLINK_OFFBOARD_CONTROL_MODE_POSITION 4
-#define MAVLINK_OFFBOARD_CONTROL_FLAG_ARMED 0x10
 
 /**
  * @brief Serial function
@@ -287,7 +286,7 @@ int serial_send(int serial_fd)
 		sp.group = 0;
 
 		/* set rate mode, set zero rates and 20% throttle */
-		sp.mode = MAVLINK_OFFBOARD_CONTROL_MODE_RATES;
+		sp.mode = MAVLINK_OFFBOARD_CONTROL_MODE_ATTITUDE;
 
 		sp.roll[0] = INT16_MAX * 0.0f;
 		sp.pitch[0] = INT16_MAX * 0.0f;
@@ -299,8 +298,10 @@ int serial_send(int serial_fd)
 		mavlink_msg_set_quad_swarm_roll_pitch_yaw_thrust_encode(200, 0, &message, &sp);
 		unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
 		printf("before write\n");
+		/* write packet via serial link */
 		write(fd, buf, len);
-		tcflush(fd, TCOFLUSH);
+		/* wait until all data has been written */
+		tcdrain(fd);
 		printf("after write\n");
 
 		if (loopcounter % 100 == 0) {
