@@ -36,7 +36,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-// The following two non-standard baudrates should have been befined by the system
+// The following two non-standard baudrates should have been defined by the system
 // If not, just fallback to number
 #ifndef B460800
 #define B460800 460800
