@@ -188,14 +188,14 @@ bool setup_port(int fd, int baud, int data_bits, int stop_bits, bool parity, boo
 		// These two non-standard (by the 70'ties ) rates are fully supported on
 		// current Debian and Mac OS versions (tested since 2010).
 		case 460800:
-			if (cfsetispeed(&config, B460800) < 0 || cfsetospeed(&config, 460800) < 0)
+			if (cfsetispeed(&config, B460800) < 0 || cfsetospeed(&config, B460800) < 0)
 			{
 				fprintf(stderr, "\nERROR: Could not set desired baud rate of %d Baud\n", baud);
 				return false;
 			}
 			break;
 		case 921600:
-			if (cfsetispeed(&config, B921600) < 0 || cfsetospeed(&config, 921600) < 0)
+			if (cfsetispeed(&config, B921600) < 0 || cfsetospeed(&config, B921600) < 0)
 			{
 				fprintf(stderr, "\nERROR: Could not set desired baud rate of %d Baud\n", baud);
 				return false;
