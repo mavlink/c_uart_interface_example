@@ -36,6 +36,16 @@
 #include <sys/time.h>
 #include <time.h>
 
+// The following two non-standard baudrates should have been befined by the system
+// If not, just fallback to number
+#ifndef B460800
+#define B460800 460800
+#endif
+
+#ifndef B921600
+#define B921600 921600
+#endif
+
 using std::string;
 using namespace std;
 
