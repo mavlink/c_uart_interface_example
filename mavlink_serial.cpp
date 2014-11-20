@@ -114,7 +114,7 @@ int main_send() {
 	// WRITE
 	int len = write_serial(message);
 
-	printf("Sent buffed of length %i\n",len);
+	printf("Sent buffer of length %i\n",len);
 
 	return 0;
 }
