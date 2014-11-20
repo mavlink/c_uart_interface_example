@@ -1,4 +1,4 @@
 *.o
-mavlink_serial
-send_quad_commands
+*.d
+c_uart_interface_example
 .DS_Store
