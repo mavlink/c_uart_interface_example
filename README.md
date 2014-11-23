@@ -88,7 +88,7 @@ There are a few things to explore past this example.
 First you can connect via a Telemetry Radio on Telem 1 or 2, or via an FTDI on the Serial 4/5 port 
 (https://pixhawk.org/dev/wiring).
 
-Now you'll be able to start this port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  You'll use a different port in steps 2 and 3 above.
+With this you'll be able to start this port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  You'll use a different port in steps 2 and 3 above.
 
 On the off-board computer side, the port might now be ```/dev/ttyUSB0```
 
@@ -101,7 +101,7 @@ On the Pixhawk side, here are the port mappings
 | Serial 4 | /dev/ttyS6 |
 | Serial 5 | /dev/ttyS5 |
 
-Now add a print statement in the Pixhawk Firmware to see received messages.
+Now add a print statement in the Pixhawk Firmware to see received messages.  Build and upload this to Pixhawk.
 
 ```
 [Firmware/src/modules/mavlink/mavlink_receiver.cpp : line 1351]
@@ -117,7 +117,7 @@ for (ssize_t i = 0; i < nread; i++) {
 		handle_message(&msg);
 ```
 
-Screen into the NuttX shell and run the ```c_uart_interface_example``` executable, and you should see output similar to this:
+Screen into the NuttX shell, and in another terminal run the ```c_uart_interface_example``` executable. You should see output in the NuttX shell similar to this:
 
 ```
 HANDLE MESSAGE
