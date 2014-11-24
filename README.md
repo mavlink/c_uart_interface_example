@@ -21,7 +21,7 @@ Harware Setup
 
 Connect the USB programming cable to your Pixhawk.  
 
-If you want to be able to interact with this example in Pixhawk's NuttX shell, you'll need a Telemetry Radio or an FTDI developer's cable, connected to Serial 4 (https://pixhawk.org/dev/wiring).
+If you want to be able to interact with this example in Pixhawk's NuttX shell, you'll need a Telemetry Radio or an FTDI developer's cable.  See the Exploration section below for more detail.
 
 
 Execution
@@ -35,7 +35,7 @@ screen /dev/ttyACM0 57600 8N1
 <press enter>
 ```
 
-You have to pick a port name, if the above exampled doesn't work, try searching for it with 
+You have to pick a port name, if the above example doesn't work, try searching for it with 
 ```
 $ ls /dev/ttyACM*
 $ ls /dev/ttyUSB*
@@ -49,9 +49,10 @@ nsh> mavlink start -d /dev/ttyACM0
 ```
 
 Pixhawk will start dumping machine data to the shell.
+
 Exit screen with the key sequence: ```Ctrl+A , K, Y```
 
-3. Run the Example executable.
+3. Run the Example Executable
 -----------------------------
 
 ```
@@ -90,11 +91,9 @@ There are a few things to explore past this example.
 First you can connect via a Telemetry Radio on Telem 1 or 2, or via an FTDI on Telem 2 or Serial 4 
 (https://pixhawk.org/dev/wiring).  Note: Serial 5's receive pin is occupied by a second NuttX shell and can't be used to receive data without reconfiguration.
 
-With this you'll be able to start a second port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  You'll use a different port in steps 2 and 3 above.
+With this you'll be able to start a second port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  
 
-On the off-board computer side, the port might now be ```/dev/ttyUSB0```
-
-On the Pixhawk side, here are the port mappings
+For steps 2 and 3 from the above tutorial, you'll use a different port.  On the off-board computer side, the port might now be ```/dev/ttyUSB0```.  On the Pixhawk side, here the port mappings are in the table below.
 
 | PX4 UART | NuttX UART |
 |----------|------------|
