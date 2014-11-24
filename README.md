@@ -10,7 +10,7 @@ Building
 ========
 
 ```
-$ cd c_uart_interface_example/Release/
+$ cd c_uart_interface_example/build/
 $ make
 ```
 
@@ -49,7 +49,7 @@ Exit screen with the key sequence: ```Ctrl+A , K, Y```
 -----------------------------
 
 ```
-$ cd c_uart_interface_example/Release
+$ cd c_uart_interface_example/build
 $ ./c_uart_interface_example -d /dev/ttyACM0
 ```
 
@@ -85,13 +85,48 @@ Exploration
 
 There are a few things to explore past this example.
 
-1. Connect via an FTDI cable on the Telem 2 or Serial 4/5 port 
+First you can connect via a Telemetry Radio on Telem 1 or 2, or via an FTDI on the Serial 4/5 port 
 (https://pixhawk.org/dev/wiring).
-On the off-board computer side, the port might be ```/dev/ttyUSB0```
-If using Serial 4/5 on the Pixhawk side, the port will be ```/dev/ttyS5```
 
-2. Modify the received message data type
-3. Modify the sent message data type
+With this you'll be able to start this port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  You'll use a different port in steps 2 and 3 above.
+
+On the off-board computer side, the port might now be ```/dev/ttyUSB0```
+
+On the Pixhawk side, here are the port mappings
+
+| PX4 UART | NuttX UART |
+|----------|------------|
+| Telem 1  | /dev/ttyS1 |
+| Telem 2  | /dev/ttyS2 |
+| Serial 4 | /dev/ttyS6 |
+| Serial 5 | /dev/ttyS5 |
+
+Now add a print statement in the Pixhawk Firmware to see received messages.  Build and upload this to Pixhawk.
+
+```
+[Firmware/src/modules/mavlink/mavlink_receiver.cpp : line 1351]
+/* if read failed, this loop won't execute */
+for (ssize_t i = 0; i < nread; i++) {
+	if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &status)) {
+
+		/* --- REPORT HANDLING OF MESSAGE --- */
+		printf("HANDLE MESSAGE\n");
+		printf("MSGID:%i\n",msg.msgid);
+
+		/* handle generic messages and commands */
+		handle_message(&msg);
+```
+
+Screen into the NuttX shell, and in another terminal run the ```c_uart_interface_example``` executable. You should see output in the NuttX shell similar to this:
+
+```
+HANDLE MESSAGE
+MSGID:84
+```
+
+Past this, you can:
+- Modify the received message data type
+- Modify the sent message data type
 
 
 
