@@ -14,6 +14,8 @@ $ cd c_uart_interface_example/build/
 $ make
 ```
 
+This example was developed in Eclipse, and a .project file is available in this repository.
+
 Harware Setup
 =========
 
