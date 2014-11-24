@@ -4,15 +4,15 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../mavlink_serial.cpp \
+../mavlink_control.cpp \
 ../serial_port.cpp 
 
 OBJS += \
-./mavlink_serial.o \
+./mavlink_control.o \
 ./serial_port.o 
 
 CPP_DEPS += \
-./mavlink_serial.d \
+./mavlink_control.d \
 ./serial_port.d 
 
 
