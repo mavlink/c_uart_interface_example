@@ -28,8 +28,6 @@
 using std::string;
 using namespace std;
 
-#include "serial_port.h"
-
 #include <common/mavlink.h>
 
 

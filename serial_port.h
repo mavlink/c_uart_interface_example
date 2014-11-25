@@ -44,13 +44,16 @@
 //   Prototypes
 // ------------------------------------------------------------------------------
 
-int read_serial(mavlink_message_t &message);
-int write_serial(mavlink_message_t &message);
 
-void open_serial(char *&uart_name, int &baudrate);
-void close_serial();
+class SerialPort;
 
-int _open_port(const char* port);
-bool _setup_port(int baud, int data_bits, int stop_bits, bool parity, bool hardware_control);
+//int read_serial(mavlink_message_t &message);
+//int write_serial(mavlink_message_t &message);
+//
+//void open_serial(char *&uart_name, int &baudrate);
+//void close_serial();
+//
+//int _open_port(const char* port);
+//bool _setup_port(int baud, int data_bits, int stop_bits, bool parity, bool hardware_control);
 
 
