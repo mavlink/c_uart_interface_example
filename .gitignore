@@ -1,5 +1,5 @@
 *.o
 *.d
-c_uart_interface_example
+mavlink_control
 .DS_Store
 .settings/
