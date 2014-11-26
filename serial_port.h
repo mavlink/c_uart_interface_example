@@ -8,6 +8,7 @@
  * Functions for opening, closing, reading and writing via serial ports
   *
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
 

@@ -8,13 +8,21 @@
  * Defines the system id and component id
  *
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
+
+#ifndef SYSTEM_IDS_H_
+#define SYSTEM_IDS_H_
 
 
 // ------------------------------------------------------------------------------
 //   Parameters
 // ------------------------------------------------------------------------------
 
-int sysid  = 1;  // The unique system id of this MAV, 0-127. Has to be consistent across the system
-int compid = 50; // The component id
+int sysid            = 1;   // The vehicle's system ID (parameter: MAV_SYS_ID)
+int autopilot_compid = 50;  // The autopilot component (parameter: MAV_COMP_ID)
+int compid           = 355; // The offboard computer component ID
+
+
+#endif // SYSTEM_IDS_H_

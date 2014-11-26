@@ -9,6 +9,7 @@
  *
  * @author Lorenz Meier,   <lm@inf.ethz.ch>
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
 
@@ -18,7 +19,9 @@
 // ------------------------------------------------------------------------------
 
 #include "mavlink_control.h"
+#include "serial_port.h"
 #include "system_ids.h"
+#include "offboard_setup.h"
 
 //printf("hello");
 // ------------------------------------------------------------------------------
@@ -31,57 +34,83 @@ main(int argc, char **argv)
 	char *uart_name = (char*)"/dev/ttyUSB0";
 	int baudrate = 57600;
 
-	// return code
-	bool failure;
-
 	// --------------------------------------------------------------------------
 	//   PARSE THE COMMANDS
 	// --------------------------------------------------------------------------
+
 	try
 	{
 		parse_commandline(argc, argv, uart_name, baudrate);
 	}
 
-	catch (int failure)
+	catch ( int failure )
 	{
 		return failure;
 	}
+
 
 	// --------------------------------------------------------------------------
 	//   START SERIAL PORT
 	// --------------------------------------------------------------------------
+
 	printf("OPEN PORT\n");
 
-	try {
+	try
+	{
 		open_serial(uart_name, baudrate);
 	}
 
-	catch (int failure)
+	catch ( int failure )
 	{
 		return failure;
 	}
 
 	printf("\n");
 
+
 	// --------------------------------------------------------------------------
 	//   READ ONE MESSAGE
 	// --------------------------------------------------------------------------
+
 	printf("READ MAVLINK\n");
+
 	read_message();
+
 	printf("\n");
 
+
 	// --------------------------------------------------------------------------
-	//   SEND ONE MESSAGE
+	//   STREAM COMMANDS
 	// --------------------------------------------------------------------------
-	printf("Write MAVLINK\n");
-	write_message();
+
+	printf("Start Off-Board Mode\n");
+	start_offboard();
+
+	/**
+	 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
+	 * will go into fail safe mode (and probably descend)
+	 */
+	printf("Write Off-Board Commands\n");
+	for (int i=0; i<10; i++)
+	{
+		usleep(250000);   // Stream at 4 Hz
+		write_message();
+	}
+
+	printf("Stop Off-Board Mode\n");
+	stop_offboard();
+
 	printf("\n");
+
 
 	// --------------------------------------------------------------------------
 	//   CLOSE PORT
 	// --------------------------------------------------------------------------
+
 	printf("CLOSE PORT\n");
+
 	close_serial();
+
 	printf("\n");
 
 	return 0;
@@ -159,21 +188,15 @@ write_message()
 	// --------------------------------------------------------------------------
 	mavlink_set_position_target_local_ned_t sp;
 	sp.time_boot_ms     = 0;
-	sp.type_mask        = 0;
-	sp.target_system    = 1;
-	sp.target_component = 1;
+	sp.type_mask        = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
+			              MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
+	sp.target_system    = sysid;
+	sp.target_component = autopilot_compid;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x = 0.0f;
+	sp.x = 1.0f;   // move north one meter
 	sp.y = 0.0f;
 	sp.z = 0.0f;
-	sp.vx = 9000.0f;
-	sp.vy = 0.0f;
-	sp.vz = 0.0f;
-	sp.afx = 0.0f;
-	sp.afy = 9000.0f;
-	sp.afz = 0.0f;
 	sp.yaw = 0.0f;
-	sp.yaw_rate = 0.0f;
 
 	// --------------------------------------------------------------------------
 	//   ENCODE
