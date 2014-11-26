@@ -76,7 +76,7 @@ main(int argc, char **argv)
 
 	printf("READ MAVLINK\n");
 
-//	read_message();
+	read_message();
 
 	printf("\n");
 
@@ -86,43 +86,25 @@ main(int argc, char **argv)
 	// --------------------------------------------------------------------------
 
 	printf("Start Off-Board Mode\n");
-	
-	if(toggle_offboard(1.0))
+	start_offboard();
+
+	/**
+	 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
+	 * will go into fail safe mode (and probably descend)
+	 */
+	printf("Write Off-Board Commands\n");
+
+	while(CMD_STREAM_FLAG)
 	{
-		mavlink_local_position_ned_t pos;
-
-		float sp_x = 0.0f;
-		float sp_y = 0.0f;
-		float sp_z = -0.2f;		//Take off to height of 0.2m above take-off point
-		float sp_yaw = 0.0f;
-		/**
-		 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
-		 * will go into fail safe mode (and probably descend)
-		 */
-		printf("Write Off-Board Commands\n");
-
-		while(CMD_STREAM_FLAG)
-		{
-			usleep(250000);   // Stream at 4 Hz
-			write_message(sp_x, sp_y, sp_z, sp_yaw);
-			
-			if(pos.x == sp_x || pos.y == sp_y || pos.z == sp_z)
-			{
-				//Setpoint reached, we can stop streaming now
-				break;
-			}
-		}
-
-		printf("Stop Off-Board Mode\n");
-		toggle_offboard(0.0);
-
-		printf("\n");
+		write_message();
+		usleep(250000);	 // Stream at 4Hz
 	}
 
-	else
-	{
-		printf("Failed to switch to offboard. Aborting...\n");
-	}
+	printf("Stop Off-Board Mode\n");
+	stop_offboard();
+
+	printf("\n");
+
 
 	// --------------------------------------------------------------------------
 	//   CLOSE PORT
@@ -201,7 +183,7 @@ read_message()
 //   Write Message
 // ------------------------------------------------------------------------------
 int
-write_message(float x, float y, float z, float yaw)
+write_message()
 {
 
 	// --------------------------------------------------------------------------
@@ -214,10 +196,10 @@ write_message(float x, float y, float z, float yaw)
 	sp.target_system    = sysid;
 	sp.target_component = autopilot_compid;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x = x;   // move north one meter
-	sp.y = y;
-	sp.z = z;
-	sp.yaw = yaw;
+	sp.x = 1.0f;   // move north one meter
+	sp.y = 0.0f;
+	sp.z = 0.0f;
+	sp.yaw = 0.0f;
 
 	// --------------------------------------------------------------------------
 	//   ENCODE
