@@ -1,4 +1,4 @@
-/** This example is public domain. */
+ /** This example is public domain. */
 
 /**
  * @file mavlink_control.cpp
