@@ -5,14 +5,17 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../mavlink_control.cpp \
+../offboard_setup.cpp \
 ../serial_port.cpp 
 
 OBJS += \
 ./mavlink_control.o \
+./offboard_setup.o \
 ./serial_port.o 
 
 CPP_DEPS += \
 ./mavlink_control.d \
+./offboard_setup.d \
 ./serial_port.d 
 
 
@@ -20,7 +23,7 @@ CPP_DEPS += \
 %.o: ../%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross G++ Compiler'
-	g++ -I"~/src/my_branch/c_uart_example_aerialhedgehog/mavlink" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I"/home/app/eclipse/workspace/c_uart_interface_example/mavlink/include/mavlink/v1.0" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 
