@@ -23,7 +23,6 @@
 #include "system_ids.h"
 #include "offboard_setup.h"
 
-//printf("hello");
 // ------------------------------------------------------------------------------
 //   Main
 // ------------------------------------------------------------------------------
@@ -65,6 +64,9 @@ main(int argc, char **argv)
 		return failure;
 	}
 
+	// Set up program termination
+	signal(SIGINT, quit_handler);
+
 	printf("\n");
 
 
@@ -91,7 +93,8 @@ main(int argc, char **argv)
 	 * will go into fail safe mode (and probably descend)
 	 */
 	printf("Write Off-Board Commands\n");
-	for (int i=0; i<10; i++)
+
+	while(CMD_STREAM_FLAG)
 	{
 		usleep(250000);   // Stream at 4 Hz
 		write_message();
@@ -266,6 +269,13 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 	return;
 }
 
+// --------------------------------------------------------------------------------
+//    Handle CTRL-C terminate commands from the terminal
+// -------------------------------------------------------------------------------
 
-
-
+void
+quit_handler(int sig)
+{
+	printf("Terminating at user's request\n");
+	CMD_STREAM_FLAG = 0;
+}
