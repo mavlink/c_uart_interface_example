@@ -6,6 +6,7 @@
  * @brief setup functions for off-board
  *
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
 

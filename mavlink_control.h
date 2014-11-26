@@ -8,6 +8,7 @@
  * This process connects an external MAVLink UART device to send an receive data
  *
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
 

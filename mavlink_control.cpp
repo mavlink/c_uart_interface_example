@@ -9,6 +9,7 @@
  *
  * @author Lorenz Meier,   <lm@inf.ethz.ch>
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ * @author Jaycee Lock, <jaycee.lock@gmail.com>
  *
  */
 
@@ -19,7 +20,7 @@
 
 #include "mavlink_control.h"
 #include "serial_port.h"
-//#include "system_ids.h"
+#include "system_ids.h"
 #include "offboard_setup.h"
 
 
