@@ -6,17 +6,22 @@
 //   Parameters
 // ------------------------------------------------------------------------------
 
-bool offboard_status = false;
+//bool offboard_status = false;
 
 // ------------------------------------------------------------------------------
 //   Toggle Off-Board Mode
 // ------------------------------------------------------------------------------
 int
-toggle_offboard(void)
+toggle_offboard(float sw)
 {
 	// Prepare command for off-board mode
 	mavlink_command_long_t com;
-	com.param1           = 1.0f;   //A number > 0.5f is required here
+	
+	/* This paramater is what sets the offboard mode
+	   param1 > 0.5f = Enter offboard mode
+	   param2 < 0.5f = Exit offboard mode
+	*/
+	com.param1           = sw;
 	com.target_system    = sysid;
 	com.target_component = autopilot_compid;
 	com.command          = MAV_CMD_NAV_GUIDED_ENABLE;
@@ -28,15 +33,24 @@ toggle_offboard(void)
 	// Send the message
 	int len = write_serial(message);
 
-	// Done!
-	return len;
+	// Check if mode is sucessully set
+	if(len > 0)
+	{
+		return 1;
+	}
+
+	else
+	{
+		return 0;
+	}
+
 }
 
 
 // ------------------------------------------------------------------------------
 //   Start Off-Board Mode
 // ------------------------------------------------------------------------------
-void
+/*void
 start_offboard()
 {
 	// Should only send this command once
@@ -125,7 +139,7 @@ stop_offboard(void)
 		}
 
 	} // end: if offboard_status
-}
+}*/
 
 
 

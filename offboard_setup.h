@@ -80,7 +80,7 @@ using namespace std;
 // ------------------------------------------------------------------------------
 //   Function prototypes
 // ------------------------------------------------------------------------------
-int toggle_offboard(void);
+int toggle_offboard(float sw);
 void start_offboard(void);
 void stop_offboard(void);
 

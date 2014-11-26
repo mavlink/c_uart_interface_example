@@ -86,25 +86,32 @@ main(int argc, char **argv)
 	// --------------------------------------------------------------------------
 
 	printf("Start Off-Board Mode\n");
-	start_offboard();
-
-	/**
-	 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
-	 * will go into fail safe mode (and probably descend)
-	 */
-	printf("Write Off-Board Commands\n");
-
-	while(CMD_STREAM_FLAG)
+	
+	if(toggle_offboard(1.0))
 	{
-		usleep(250000);   // Stream at 4 Hz
-		write_message();
+
+		/**
+		 * Pixhawk needs to see off-board commands at minimum 2Hz, otherwise it
+		 * will go into fail safe mode (and probably descend)
+		 */
+		printf("Write Off-Board Commands\n");
+
+		while(CMD_STREAM_FLAG)
+		{
+			usleep(250000);   // Stream at 4 Hz
+			write_message();
+		}
+
+		printf("Stop Off-Board Mode\n");
+		toggle_offboard(0.0);
+
+		printf("\n");
 	}
 
-	printf("Stop Off-Board Mode\n");
-	stop_offboard();
-
-	printf("\n");
-
+	else
+	{
+		printf("Failed to switch to offboard. Aborting...\n");
+	}
 
 	// --------------------------------------------------------------------------
 	//   CLOSE PORT
