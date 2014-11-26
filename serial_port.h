@@ -21,6 +21,7 @@
 #include <unistd.h>  /* UNIX standard function definitions */
 #include <fcntl.h>   /* File control definitions */
 #include <termios.h> /* POSIX terminal control definitions */
+#include <pthread.h>
 
 #include <common/mavlink.h>
 
@@ -45,7 +46,7 @@
 // ------------------------------------------------------------------------------
 
 
-class SerialPort;
+class Serial_Port;
 
 //int read_serial(mavlink_message_t &message);
 //int write_serial(mavlink_message_t &message);

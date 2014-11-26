@@ -21,22 +21,45 @@
 #include "serial_port.h"
 
 
-class SerialPort
+// ----------------------------------------------------------------------------------
+//   Serial Port Manager Class
+// ----------------------------------------------------------------------------------
+
+class Serial_Port
 {
 
 public:
 
-	SerialPort()
+	// ------------------------------------------------------------------------------
+	//   Con/De structors
+	// ------------------------------------------------------------------------------
+
+	Serial_Port()
 	{
-		 debug = false;
-		 fd    = -1;
+		// Initialize attributes
+		debug = false;
+		fd    = -1;
+
+		// Start mutex
+		int result = pthread_mutex_init(&lock, NULL);
+		if ( result != 0 )
+		{
+			printf("\n mutex init failed\n");
+			throw 1;
+		}
+
 	}
 
-	~SerialPort(){}
+	~Serial_Port()
+	{
+		// destroy mutex
+		pthread_mutex_destroy(&lock);
+
+	}
 
 
 	// ------------------------------------------------------------------------------
-	//   Parameters
+	//   Attributes
 	// ------------------------------------------------------------------------------
 
 	bool debug;
@@ -55,12 +78,15 @@ public:
 		// --------------------------------------------------------------------------
 		//   READ FROM PORT
 		// --------------------------------------------------------------------------
-		int rtn = read(fd, &cp, 1);
+
+		// this function locks the port during read
+		int result = _read_port(cp);
+
 
 		// --------------------------------------------------------------------------
 		//   PARSE MESSAGE
 		// --------------------------------------------------------------------------
-		if (rtn > 0)
+		if (result > 0)
 		{
 			// the parsing
 			msgReceived = mavlink_parse_char(MAVLINK_COMM_1, cp, &message, &status);
@@ -126,14 +152,11 @@ public:
 	{
 		char buf[300];
 
-		// Send message to buffer
+		// Translate message to buffer
 		unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
 
-		// Write packet via serial link
-		write(fd, buf, len);
-
-		// Wait until all data has been written
-		tcdrain(fd);
+		// Write buffer to serial port, locks port while writing
+		_write_port(buf,len);
 
 		return len;
 	}
@@ -210,6 +233,7 @@ private:
 
 	int  fd;
 	mavlink_status_t lastStatus;
+	pthread_mutex_t lock;
 
 
 	// ------------------------------------------------------------------------------
@@ -388,6 +412,52 @@ private:
 		// Done!
 		return true;
 	}
+
+
+
+	// ------------------------------------------------------------------------------
+	//   Read Port with Lock
+	// ------------------------------------------------------------------------------
+
+	int
+	_read_port(uint8_t &cp)
+	{
+
+		// Lock
+		pthread_mutex_lock(&lock);
+
+		int result = read(fd, &cp, 1);
+
+		// Unlock
+		pthread_mutex_unlock(&lock);
+
+		return result;
+	}
+
+
+	// ------------------------------------------------------------------------------
+	//   Write Port with Lock
+	// ------------------------------------------------------------------------------
+
+	void
+	_write_port(char *buf, unsigned &len)
+	{
+
+		// Lock
+		pthread_mutex_lock(&lock);
+
+		// Write packet via serial link
+		write(fd, buf, len);
+
+		// Wait until all data has been written
+		tcdrain(fd);
+
+		// Unlock
+		pthread_mutex_unlock(&lock);
+
+		return;
+	}
+
 
 };
 
