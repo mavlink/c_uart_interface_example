@@ -13,6 +13,11 @@
  *
  */
 
+/**
+ * TODO: Create simple trajectory, such as takeoff, flying in a circle, and landing
+ * TODO: Add safety, such as instant landing, in case something goes wrong
+ * TODO: Send attitude target message
+ */
 
 // ------------------------------------------------------------------------------
 //   Includes
