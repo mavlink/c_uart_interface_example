@@ -3,3 +3,7 @@
 mavlink_control
 .DS_Store
 .settings/
+
+.project
+.cproject
+
