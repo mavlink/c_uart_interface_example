@@ -20,17 +20,9 @@
 //   Parameters
 // ------------------------------------------------------------------------------
 
-/*int sysid            = 1;   // The vehicle's system ID (parameter: MAV_SYS_ID)
-int autopilot_compid = 50;  // The autopilot component (parameter: MAV_COMP_ID)
-int compid           = 355; // The offboard computer component ID */
-
-//#define sysid 1
-//#define autopilot_compid 50
-//#define compid 355
-
-const unsigned int sysid = 1;
-const unsigned int autopilot_compid = 50;
-const unsigned int compid = 355;
+const uint8_t sysid            = 1;   // The vehicle's system ID (parameter: MAV_SYS_ID)
+const uint8_t autopilot_compid = 50;  // The autopilot component (parameter: MAV_COMP_ID)
+const uint8_t compid           = 110; // The offboard computer component ID */
 
 
 #endif // SYSTEM_IDS_H_
