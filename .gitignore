@@ -4,3 +4,4 @@ mavlink_control
 c_uart_interface_example
 .DS_Store
 .settings/
+/Debug/

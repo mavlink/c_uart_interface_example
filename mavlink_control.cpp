@@ -102,7 +102,7 @@ commands()
 	sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
 				   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x   = position_initial.x + 3.0f;
+	sp.x   = position_initial.x;
 	sp.y   = position_initial.y;
 	sp.z   = position_initial.z;
 	sp.yaw = position_initial.yaw;
@@ -111,7 +111,7 @@ commands()
 	position_target = sp;
 
 	// now pixhawk will try to move
-	sleep(4);
+	sleep(8);
 
 
 	// --------------------------------------------------------------------------
@@ -121,6 +121,10 @@ commands()
 	printf("STOP OFFBOARD MODE\n");
 
 	stop_offboard(serial_port);
+
+	sleep(2);
+
+	printf("STOPPED\n");
 
 	// now pixhawk isn't listening to setpoint commands
 	printf("\n");
@@ -491,6 +495,11 @@ read_message()
 
 	 */
 
+	mavlink_local_position_ned_t pos = vehicle_data.local_position_ned;
+	printf("\n");
+	printf("%lu POSITION_CURRENT = [ %f , %f , %f ] \n", write_count, pos.x, pos.y, pos.z);
+	printf("\n");
+
 	return 0;
 }
 
@@ -572,7 +581,7 @@ write_message()
 	if ( not len > 0 )
 		fprintf(stderr,"WARNING: could not send POSITION_TARGET_LOCAL_NED \n");
 	else
-		printf("%lu POSITION_TARGET.X = %f \n", write_count, position_target.x);
+		printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
 
 	// book keep
 	write_count++;
