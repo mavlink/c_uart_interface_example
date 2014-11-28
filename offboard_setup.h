@@ -44,13 +44,13 @@ bool offboard_status = false;
 //   Toggle Off-Board Mode
 // ------------------------------------------------------------------------------
 int
-toggle_offboard(Serial_Port &serial_port)
+toggle_offboard(Serial_Port &serial_port, float value)
 {
 	// Prepare command for off-board mode
 	mavlink_command_long_t com;
 	com.target_system    = sysid;             // TODO - read this from autopilot
 	com.target_component = autopilot_compid;  // TODO - read this from autopilot
-	com.param1           = 1.0f;   //A number > 0.5f is required here
+	com.param1           = value;             // value >0.5 => start, <0.5 => stop
 	com.command          = MAV_CMD_NAV_GUIDED_ENABLE;
 
 	// Encode
@@ -79,7 +79,7 @@ start_offboard(Serial_Port &serial_port)
 		// ----------------------------------------------------------------------
 
 		// Sends the command to go off-board
-		int success = toggle_offboard(serial_port);
+		int success = toggle_offboard(serial_port,1.0);
 
 		// Check the command was written
 		if ( success )
@@ -110,7 +110,7 @@ stop_offboard(Serial_Port &serial_port)
 		// ----------------------------------------------------------------------
 
 		// Sends the command to stop off-board
-		int success = toggle_offboard(serial_port);
+		int success = toggle_offboard(serial_port,0.0);
 
 		// Check the command was written
 		if ( success )
