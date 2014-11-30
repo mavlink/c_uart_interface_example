@@ -45,6 +45,8 @@ void startup(int argc, char **argv);
 void commands();
 void shutdown();
 
+void quit_handler(int sig);
+
 int read_message();
 int write_message();
 void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate);

@@ -88,6 +88,7 @@ commands()
 
 	printf("START OFFBOARD MODE\n");
 	start_offboard(serial_port);
+	sleep(1);
 
 	// now pixhawk is accepting setpoint commands
 	printf("\n");
@@ -99,16 +100,47 @@ commands()
 
 	// prepare command
 	mavlink_set_position_target_local_ned_t sp;
-	sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-				   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x   = position_initial.x;
-	sp.y   = position_initial.y;
+
+//	sp.x   = position_initial.x;
+//	sp.y   = position_initial.y;
+//	sp.z   = position_initial.z;
+//
+//	sp.vx  = 0.0;
+//	sp.vy  = 0.0;
+//	sp.vz  = 0.0;
+//
+//	sp.afx = 0.0;
+//	sp.afy = 0.0;
+//	sp.afz = 0.0;
+
+
+	sp.x   = position_initial.x - 5.0;
+	sp.y   = position_initial.y - 5.0;
 	sp.z   = position_initial.z;
-	sp.yaw = position_initial.yaw;
+
+	sp.vx  = -1.0;
+	sp.vy  = -1.0;
+	sp.vz  = -0.0;
+
+	sp.afx = 0.0;
+	sp.afy = 0.0;
+	sp.afz = 0.0;
+
+	sp.yaw = 0.0;
+	sp.yaw_rate = 0.0;
+
+	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+
+	sp.type_mask =
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     & // always need this
+//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION     &
+//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_ACCELERATION & // not working
+//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE    ;
+//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE     ;
 
 	// set command
 	position_target = sp;
+	printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
 
 	// now pixhawk will try to move
 	sleep(8);
@@ -121,10 +153,6 @@ commands()
 	printf("STOP OFFBOARD MODE\n");
 
 	stop_offboard(serial_port);
-
-	sleep(2);
-
-	printf("STOPPED\n");
 
 	// now pixhawk isn't listening to setpoint commands
 	printf("\n");
@@ -142,6 +170,12 @@ void startup(int argc, char **argv)
 	char *uart_name = (char*)"/dev/ttyUSB0";
 	int baudrate = 57600;
 	int result;
+
+	// --------------------------------------------------------------------------
+	//   SETUP TERMINAITON SIGNAL
+	// --------------------------------------------------------------------------
+
+	signal(SIGINT, quit_handler);
 
 	// --------------------------------------------------------------------------
 	//   PARSE THE COMMANDS
@@ -181,7 +215,11 @@ void startup(int argc, char **argv)
 	printf("CHECK FOR HEARTBEAT\n");
 
 	while ( not vehicle_data.time_stamps.heartbeat )
+	{
+		if ( time_to_exit )
+			throw 0;
 		usleep(500000);
+	}
 
 	printf("FOUND\n");
 
@@ -233,6 +271,8 @@ void startup(int argc, char **argv)
 	position_initial.vz           = local_data.local_position_ned.vz;
 	position_initial.yaw          = local_data.attitude.yaw;
 	position_initial.yaw_rate     = local_data.attitude.yawspeed;
+
+	printf("%lu POSITION_INITIAL  = [ %f , %f , %f ] \n", write_count, position_initial.x, position_initial.y, position_initial.z);
 
 	// we need this before starting the write thread
 
@@ -316,7 +356,7 @@ read_thread(void *arg)
 int
 read_message()
 {
-	bool success;           // receive success flag
+	bool success;               // receive success flag
 	bool received_all = false;  // receive only one message
 	Time_Stamps this_timestamps;
 
@@ -495,10 +535,10 @@ read_message()
 
 	 */
 
-	mavlink_local_position_ned_t pos = vehicle_data.local_position_ned;
-	printf("\n");
-	printf("%lu POSITION_CURRENT = [ %f , %f , %f ] \n", write_count, pos.x, pos.y, pos.z);
-	printf("\n");
+//	mavlink_local_position_ned_t pos = vehicle_data.local_position_ned;
+//	printf("\n");
+//	printf("%lu POSITION_CURRENT = [ %f , %f , %f ] \n", write_count, pos.x, pos.y, pos.z);
+//	printf("\n");
 
 	return 0;
 }
@@ -512,15 +552,15 @@ void*
 write_thread(void *arg)
 {
 
-	// prepare position target
+	// prepare an initial setpoint, just stay put
 	mavlink_set_position_target_local_ned_t sp;
-	sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-				   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE;
+	sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY &
+				   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE;
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.x   = position_initial.x;
-	sp.y   = position_initial.y;
-	sp.z   = position_initial.z;
-	sp.yaw = position_initial.yaw;
+	sp.vx       = 0.0;
+	sp.vy       = 0.0;
+	sp.vz       = 0.0;
+	sp.yaw_rate = 0.0;
 
 	// set position target
 	position_target = sp;
@@ -580,8 +620,8 @@ write_message()
 	// check the write
 	if ( not len > 0 )
 		fprintf(stderr,"WARNING: could not send POSITION_TARGET_LOCAL_NED \n");
-	else
-		printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
+//	else
+//		printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
 
 	// book keep
 	write_count++;
@@ -644,6 +684,17 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 
 
 // ------------------------------------------------------------------------------
+//    Handle CTRL-C terminate commands from the terminal
+// ------------------------------------------------------------------------------
+void
+quit_handler(int sig)
+{
+	printf("Terminating at user's request\n");
+	time_to_exit = true;
+}
+
+
+// ------------------------------------------------------------------------------
 //   Main
 // ------------------------------------------------------------------------------
 
@@ -659,7 +710,7 @@ main(int argc, char **argv)
 
 	catch ( int error )
 	{
-		throw error;
+		return error;
 	}
 
 }

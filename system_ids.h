@@ -11,8 +11,8 @@
  *
  */
 
-#ifndef SYSTEM_IDS_H_
-#define SYSTEM_IDS_H_
+#ifndef C_UART_INTERFACE_EXAMPLE_STREAM_SYSTEM_IDS_H_
+#define C_UART_INTERFACE_EXAMPLE_STREAM_SYSTEM_IDS_H_
 
 // ------------------------------------------------------------------------------
 //   Parameters
@@ -26,6 +26,6 @@ int autopilot_compid = 0;   // The autopilot component (parameter: MAV_COMP_ID)
 int compid           = 355;
 
 
-#endif // SYSTEM_IDS_H_
+#endif // C_UART_INTERFACE_EXAMPLE_STREAM_SYSTEM_IDS_H_
 
 
