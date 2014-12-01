@@ -13,6 +13,10 @@
  */
 
 
+
+// TODO: set mpc_xy_vel_max = 2.0
+
+
 // ------------------------------------------------------------------------------
 //   Includes
 // ------------------------------------------------------------------------------
@@ -74,6 +78,117 @@ top (int argc, char **argv)
 }
 
 
+
+
+// ------------------------------------------------------------------------------
+//   SET POINT SETTERS
+// ------------------------------------------------------------------------------
+
+// choose one of these
+void
+set_position(float x, float y, float z, mavlink_set_position_target_local_ned_t &sp)
+{
+	sp.type_mask =
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY ;
+
+	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+
+	sp.x   = x;
+	sp.y   = y;
+	sp.z   = z;
+
+	// this is needed for now to avoid a throttle cut...
+	sp.vx  = 0.0;
+	sp.vy  = 0.0;
+	sp.vz  = 0.0;
+
+}
+
+void
+set_velocity(float vx, float vy, float vz, mavlink_set_position_target_local_ned_t &sp)
+{
+	sp.type_mask =
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     ;
+
+	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+
+	sp.vx  = vx;
+	sp.vy  = vy;
+	sp.vz  = vz;
+}
+
+void
+set_acceleration(float ax, float ay, float az, mavlink_set_position_target_local_ned_t &sp)
+{
+	sp.type_mask =
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_ACCELERATION &
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     ;
+
+	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
+
+	sp.afx  = ax;
+	sp.afy  = ay;
+	sp.afz  = az;
+}
+
+// needs to be called after one of the above
+void
+set_yaw(float yaw, mavlink_set_position_target_local_ned_t &sp)
+{
+	sp.type_mask &=
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE ;
+
+	sp.yaw  = yaw;
+}
+
+void
+send_setpoint(mavlink_set_position_target_local_ned_t &sp)
+{
+	// set command
+	position_target = sp;
+	printf("POSITION_TARGET XYZ = [ %.4f , %.4f , %.4f ] \n", position_target.x, position_target.y, position_target.z);
+	printf("POSITION_TARGET YAW = %f \n", position_target.yaw);
+}
+
+
+
+
+void
+get_position_intruder(float &x, float &y)
+{
+	x = 2.0;
+	y = 10.0;
+}
+
+void
+get_velocity_intruder(float &vx, float &vy)
+{
+	vx = 0;
+	vy = 0.0;
+}
+
+void
+get_position_ownship(float &x, float &y)
+{
+	x = vehicle_data.position_target_local_ned.x;
+	y = vehicle_data.position_target_local_ned.y;
+}
+
+void
+get_velocity_ownship(float &vx, float &vy)
+{
+	vx = vehicle_data.position_target_local_ned.vx;
+	vy = vehicle_data.position_target_local_ned.vy;
+}
+
+
+
+
+
+
+
+
 // ------------------------------------------------------------------------------
 //   COMMANDS
 // ------------------------------------------------------------------------------
@@ -100,56 +215,50 @@ commands()
 
 	// prepare command
 	mavlink_set_position_target_local_ned_t sp;
+	mavlink_set_position_target_local_ned_t ip = position_initial;
 
-//	sp.x   = position_initial.x;
-//	sp.y   = position_initial.y;
-//	sp.z   = position_initial.z;
-//
-//	sp.vx  = 0.0;
-//	sp.vy  = 0.0;
-//	sp.vz  = 0.0;
-//
-//	sp.afx = 0.0;
-//	sp.afy = 0.0;
-//	sp.afz = 0.0;
+	set_position( ip.x - 5.0 ,
+				  ip.y - 5.0 ,
+				  ip.z       ,
+				  sp         );
 
+//	set_velocity( -1.0       ,
+//				  -1.0       ,
+//				   0.0       ,
+//				   sp        );
 
-	sp.x   = position_initial.x - 5.0;
-	sp.y   = position_initial.y - 5.0;
-	sp.z   = position_initial.z;
+	set_yaw( ip.yaw ,
+			 sp     );
 
-	sp.vx  = -1.0;
-	sp.vy  = -1.0;
-	sp.vz  = -0.0;
-
-	sp.afx = 0.0;
-	sp.afy = 0.0;
-	sp.afz = 0.0;
-
-	sp.yaw = 0.0;
-	sp.yaw_rate = 0.0;
-
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-
-	sp.type_mask =
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     & // always need this
-//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION     &
-//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_ACCELERATION & // not working
-//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE    ;
-//		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE     ;
-
-	// set command
-	position_target = sp;
-	printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
+	// sedn the command
+	send_setpoint(sp);
 
 	// now pixhawk will try to move
 	sleep(8);
 
+	printf("\n");
+
+	// --------------------------------------------------------------------------
+	//   GET STATES
+	// --------------------------------------------------------------------------
+
+	float x,y, vx,vy;
+
+	get_position_ownship(x,y);
+	get_velocity_ownship(vx,vy);
+	printf("OWNSHIP XY: [ %.4f , %.4f ] \n" , x,y);
+	printf("OWNSHIP UV: [ %.4f , %.4f ] \n" , vx,vy);
+
+	get_position_intruder(x,y);
+	get_velocity_intruder(vx,vy);
+	printf("INTRUDER XY:[ %.4f , %.4f ] \n" , x,y);
+	printf("INTRUDER UV:[ %.4f , %.4f ] \n" , vx,vy);
+
+	printf("\n");
 
 	// --------------------------------------------------------------------------
 	//   STOP OFFBOARD MODE
 	// --------------------------------------------------------------------------
-	printf("\n");
 	printf("STOP OFFBOARD MODE\n");
 
 	stop_offboard(serial_port);
@@ -272,7 +381,9 @@ void startup(int argc, char **argv)
 	position_initial.yaw          = local_data.attitude.yaw;
 	position_initial.yaw_rate     = local_data.attitude.yawspeed;
 
-	printf("%lu POSITION_INITIAL  = [ %f , %f , %f ] \n", write_count, position_initial.x, position_initial.y, position_initial.z);
+	printf("POSITION_INITIAL XYZ = [ %.4f , %.4f , %.4f ] \n", position_initial.x, position_initial.y, position_initial.z);
+	printf("POSITION_INITIAL YAW = %.4f \n", position_initial.yaw);
+	printf("\n");
 
 	// we need this before starting the write thread
 
@@ -281,7 +392,6 @@ void startup(int argc, char **argv)
 	//   WRITE THREAD
 	// --------------------------------------------------------------------------
 	printf("START WRITE THREAD \n");
-	printf("\n");
 
 	result = pthread_create( &write_tid, NULL, &write_thread, NULL );
 	if ( result ) throw result;

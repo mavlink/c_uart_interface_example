@@ -28,7 +28,7 @@
 								<option id="gnu.cpp.compiler.option.optimization.level.73698143" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.36414634" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.include.paths.652993714" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/c_uart_interface_example_stream/mavlink/include/mavlink/v1.0}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/c_uart_interface_example/mavlink/include/mavlink/v1.0}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1169164146" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
