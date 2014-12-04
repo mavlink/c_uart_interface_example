@@ -14,8 +14,6 @@ $ cd c_uart_interface_example/
 $ make
 ```
 
-This example was also developed in Eclipse, and a .project file is available in this repository.
-
 Hardware Setup
 =========
 
@@ -40,6 +38,7 @@ screen /dev/ttyACM0 57600 8N1
 
 You have to pick a port name, if the above example doesn't work, try searching for it with 
 ```
+
 $ ls /dev/ttyACM* 
 $ ls /dev/ttyUSB*
 ```
@@ -51,6 +50,7 @@ $ dmesg
 The device described at the bottom of dmesg's output will be the port on which the Pixhawk is mounted. 
 
 The Pixhawk USB port will show up on a ```ttyACM*```, an FTDI cable will show up on a ```ttyUSB*```.
+
 
 2. Start a mavlink session on Pixhawk's USB port
 -----------------------
@@ -78,6 +78,7 @@ Here's an example output:
 ```
 OPEN PORT
 Connected to /dev/ttyUSB0 with 57600 baud, 8 data bits, no parity, 1 stop bit (8N1)
+
 
 READ MAVLINK
 Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)
