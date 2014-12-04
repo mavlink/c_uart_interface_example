@@ -85,6 +85,10 @@ top(int argc, char **argv)
 
 	printf("Start Off-Board Mode\n");
 
+	// send an initial command
+	write_message(0.0, 0.0, 0.0, 0.0);
+
+	// now start the offboard mode
 	start_offboard();
 
 
