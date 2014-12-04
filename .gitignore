@@ -1,4 +1,9 @@
 *.o
-mavlink_serial
-send_quad_commands
+*.d
+mavlink_control
 .DS_Store
+.settings/
+
+.project
+.cproject
+
