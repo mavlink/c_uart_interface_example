@@ -58,7 +58,7 @@ toggle_offboard(Serial_Port &serial_port, float value)
 	mavlink_msg_command_long_encode(sysid, compid, &message, &com);
 
 	// Send the message
-	int len = serial_port.write_serial(message);
+	int len = serial_port.write_message(message);
 
 	// Done!
 	return len;

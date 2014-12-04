@@ -14,38 +14,11 @@
 
 
 
-// TODO: set mpc_xy_vel_max = 2.0
-
-
 // ------------------------------------------------------------------------------
 //   Includes
 // ------------------------------------------------------------------------------
 
 #include "mavlink_control.h"
-#include "serial_port.cpp"
-#include "system_ids.h"
-#include "offboard_setup.h"
-#include "pos_target_bitmasks.h"
-
-
-// ------------------------------------------------------------------------------
-//   Parameters
-// ------------------------------------------------------------------------------
-
-Serial_Port serial_port;
-
-Vehicle_Data vehicle_data;
-
-bool time_to_exit = false;
-bool write_thread_running = false;
-
-uint64_t write_count = 0;
-
-mavlink_set_position_target_local_ned_t position_target;
-mavlink_set_position_target_local_ned_t position_initial;
-
-pthread_t read_tid;
-pthread_t write_tid;
 
 
 // ------------------------------------------------------------------------------
@@ -56,137 +29,100 @@ top (int argc, char **argv)
 {
 
 	// --------------------------------------------------------------------------
+	//   PARSE THE COMMANDS
+	// --------------------------------------------------------------------------
+
+	// Default input arguments
+	char *uart_name = (char*)"/dev/ttyUSB0";
+	int baudrate = 57600;
+
+	// do the parse, will throw an int if it fails
+	parse_commandline(argc, argv, uart_name, baudrate);
+
+
+	// --------------------------------------------------------------------------
 	//   PORT and THREAD STARTUP
 	// --------------------------------------------------------------------------
-	startup( argc , argv );
+
+	/*
+	 * Instantiate a serial port object
+	 *
+	 * This object handles the opening and closing of the offboard computer's
+	 * serial port over which it will communicate to an autopilot.  It has
+	 * methods to read and write a mavlink_message_t object.  To help with read
+	 * and write in the context of pthreading, it gaurds port operations with a
+	 * pthread mutex lock.
+	 *
+	 */
+	Serial_Port serial_port(uart_name, baudrate);
+
+
+	/*
+	 * Instantiate an autopilot interface object
+	 *
+	 * This starts two threads for read and write over MAVlink. The read thread
+	 * listens for any MAVlink message and pushes it to the current_messages
+	 * attribute.  The write thread at the moment only streams a position target
+	 * in the local NED frame (mavlink_set_position_target_local_ned_t), which
+	 * is changed by using the method update_setpoint().  Sending these messages
+	 * are only half the requirement to get response from the autopilot, a signal
+	 * to enter "offboard_control" mode is sent by using the enable_offboard_control()
+	 * method.  Signal the exit of this mode with disable_offboard_control().  It's
+	 * important that one way or another this program signals offboard mode exit,
+	 * otherwise the vehicle will go into failsafe.
+	 *
+	 */
+	Autopilot_Interface autopilot_interface(&serial_port);
+
+	/*
+	 * Setup interrupt signal handler
+	 *
+	 * Responds to early exits signaled with Ctrl-C.  The handler will command
+	 * to exit offboard mode if required, and close threads and the port.
+	 * The handler in this example needs references to the above objects.
+	 *
+	 */
+	serial_port_quit         = &serial_port;
+	autopilot_interface_quit = &autopilot_interface;
+	signal(SIGINT,quit_handler);
+
+	/*
+	 * Start the port and autopilot_interface
+	 * This is where the port is opened, and read and write threads are started.
+	 */
+	serial_port.start();
+	autopilot_interface.start();
+
 
 	// --------------------------------------------------------------------------
 	//   RUN COMMANDS
 	// --------------------------------------------------------------------------
-	commands();
+
+	/*
+	 * Now we can implement the algorithm we want on top of the autopilot interface
+	 */
+	commands(autopilot_interface);
+
 
 	// --------------------------------------------------------------------------
 	//   THREAD and PORT SHUTDOWN
 	// --------------------------------------------------------------------------
-	shutdown();
+
+	/*
+	 * Now that we are done we can stop the threads and close the port
+	 */
+	autopilot_interface.stop();
+	serial_port.stop();
+
 
 	// --------------------------------------------------------------------------
 	//   DONE
 	// --------------------------------------------------------------------------
+
+	// woot!
 	return 0;
 
 }
-
-
-
-
-// ------------------------------------------------------------------------------
-//   SET POINT SETTERS
-// ------------------------------------------------------------------------------
-
-// choose one of these
-void
-set_position(float x, float y, float z, mavlink_set_position_target_local_ned_t &sp)
-{
-	sp.type_mask =
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY ;
-
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-
-	sp.x   = x;
-	sp.y   = y;
-	sp.z   = z;
-
-	// this is needed for now to avoid a throttle cut...
-	sp.vx  = 0.0;
-	sp.vy  = 0.0;
-	sp.vz  = 0.0;
-
-}
-
-void
-set_velocity(float vx, float vy, float vz, mavlink_set_position_target_local_ned_t &sp)
-{
-	sp.type_mask =
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     ;
-
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-
-	sp.vx  = vx;
-	sp.vy  = vy;
-	sp.vz  = vz;
-}
-
-void
-set_acceleration(float ax, float ay, float az, mavlink_set_position_target_local_ned_t &sp)
-{
-	sp.type_mask =
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_ACCELERATION &
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY     ;
-
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-
-	sp.afx  = ax;
-	sp.afy  = ay;
-	sp.afz  = az;
-}
-
-// needs to be called after one of the above
-void
-set_yaw(float yaw, mavlink_set_position_target_local_ned_t &sp)
-{
-	sp.type_mask &=
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE ;
-
-	sp.yaw  = yaw;
-}
-
-void
-send_setpoint(mavlink_set_position_target_local_ned_t &sp)
-{
-	// set command
-	position_target = sp;
-	printf("POSITION_TARGET XYZ = [ %.4f , %.4f , %.4f ] \n", position_target.x, position_target.y, position_target.z);
-	printf("POSITION_TARGET YAW = %f \n", position_target.yaw);
-}
-
-
-
-
-void
-get_position_intruder(float &x, float &y)
-{
-	x = 2.0;
-	y = 10.0;
-}
-
-void
-get_velocity_intruder(float &vx, float &vy)
-{
-	vx = 0;
-	vy = 0.0;
-}
-
-void
-get_position_ownship(float &x, float &y)
-{
-	x = vehicle_data.position_target_local_ned.x;
-	y = vehicle_data.position_target_local_ned.y;
-}
-
-void
-get_velocity_ownship(float &vx, float &vy)
-{
-	vx = vehicle_data.position_target_local_ned.vx;
-	vy = vehicle_data.position_target_local_ned.vy;
-}
-
-
-
-
-
-
 
 
 // ------------------------------------------------------------------------------
@@ -194,568 +130,122 @@ get_velocity_ownship(float &vx, float &vy)
 // ------------------------------------------------------------------------------
 
 void
-commands()
+commands(Autopilot_Interface &api)
 {
 
 	// --------------------------------------------------------------------------
 	//   START OFFBOARD MODE
 	// --------------------------------------------------------------------------
 
-	printf("START OFFBOARD MODE\n");
-	start_offboard(serial_port);
-	sleep(1);
+	api.enable_offboard_control();
+	usleep(100); // give some time to let it sink in
 
-	// now pixhawk is accepting setpoint commands
-	printf("\n");
+	// now the autopilot is accepting setpoint commands
 
 
 	// --------------------------------------------------------------------------
 	//   SEND OFFBOARD COMMANDS
 	// --------------------------------------------------------------------------
+	printf("SEND OFFBOARD COMMANDS\n");
 
-	// prepare command
+	// initialize command data strtuctures
 	mavlink_set_position_target_local_ned_t sp;
-	mavlink_set_position_target_local_ned_t ip = position_initial;
+	mavlink_set_position_target_local_ned_t ip = api.initial_position;
 
-	set_position( ip.x - 5.0 ,
-				  ip.y - 5.0 ,
-				  ip.z       ,
-				  sp         );
+	// autopilot_interface.h provides some helper functions to build the command
 
-//	set_velocity( -1.0       ,
-//				  -1.0       ,
-//				   0.0       ,
-//				   sp        );
 
-	set_yaw( ip.yaw ,
+	// Example 1 - Set Velocity
+	set_velocity( -1.0       , // [m/s]
+				  -1.0       , // [m/s]
+				   0.0       , // [m/s]
+				   sp        );
+
+	// Example 2 - Set Position
+	// set_position( ip.x - 5.0 , // [m]
+	//			  ip.y - 5.0 , // [m]
+	//			  ip.z       , // [m]
+	//			  sp         );
+
+
+	// Example 1.2 - Add Velocity
+	set_yaw( ip.yaw , // [rad]
 			 sp     );
 
-	// sedn the command
-	send_setpoint(sp);
+	// SEND THE COMMAND
+	api.update_setpoint(sp);
+	// NOW pixhawk will try to move
 
-	// now pixhawk will try to move
-	sleep(8);
-
-	printf("\n");
-
-	// --------------------------------------------------------------------------
-	//   GET STATES
-	// --------------------------------------------------------------------------
-
-	float x,y, vx,vy;
-
-	get_position_ownship(x,y);
-	get_velocity_ownship(vx,vy);
-	printf("OWNSHIP XY: [ %.4f , %.4f ] \n" , x,y);
-	printf("OWNSHIP UV: [ %.4f , %.4f ] \n" , vx,vy);
-
-	get_position_intruder(x,y);
-	get_velocity_intruder(vx,vy);
-	printf("INTRUDER XY:[ %.4f , %.4f ] \n" , x,y);
-	printf("INTRUDER UV:[ %.4f , %.4f ] \n" , vx,vy);
+	// Wait for 8 seconds, check position
+	for (int i=0; i < 8; i++)
+	{
+		mavlink_local_position_ned_t pos = api.current_messages.local_position_ned;
+		printf("%i CURRENT POSITION XYZ = [ % .4f , % .4f , % .4f ] \n", i, pos.x, pos.y, pos.z);
+		sleep(1);
+	}
 
 	printf("\n");
+
 
 	// --------------------------------------------------------------------------
 	//   STOP OFFBOARD MODE
 	// --------------------------------------------------------------------------
-	printf("STOP OFFBOARD MODE\n");
 
-	stop_offboard(serial_port);
+	api.disable_offboard_control();
 
 	// now pixhawk isn't listening to setpoint commands
-	printf("\n");
-
-}
-
-
-// ------------------------------------------------------------------------------
-//   STARTUP
-// ------------------------------------------------------------------------------
-
-void startup(int argc, char **argv)
-{
-	// Default input arguments
-	char *uart_name = (char*)"/dev/ttyUSB0";
-	int baudrate = 57600;
-	int result;
-
-	// --------------------------------------------------------------------------
-	//   SETUP TERMINAITON SIGNAL
-	// --------------------------------------------------------------------------
-
-	signal(SIGINT, quit_handler);
-
-	// --------------------------------------------------------------------------
-	//   PARSE THE COMMANDS
-	// --------------------------------------------------------------------------
-
-	// will throw an int if fails
-	parse_commandline(argc, argv, uart_name, baudrate);
 
 
 	// --------------------------------------------------------------------------
-	//   START SERIAL PORT
+	//   GET A MESSAGE
 	// --------------------------------------------------------------------------
-	printf("OPEN PORT\n");
+	printf("READ SOME MESSAGES \n");
 
-	// will throw an int if fails
-	serial_port.open_serial(uart_name, baudrate);
+	// copy current messages
+	Vehicle_Messages messages = api.current_messages;
 
-	// now we can read from and write to pixhawk
+	// local position in ned frame
+	mavlink_local_position_ned_t pos = messages.local_position_ned;
+	printf("Got message LOCAL_POSITION_NED (spec: https://pixhawk.ethz.ch/mavlink/#LOCAL_POSITION_NED)\n");
+	printf("    pos  (NED):  %f %f %f (m)\n", pos.x, pos.y, pos.z );
+
+	// hires imu
+	mavlink_highres_imu_t imu = messages.highres_imu;
+	printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
+	printf("    ap time:     %lu \n", imu.time_usec);
+	printf("    acc  (NED):  % f % f % f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
+	printf("    gyro (NED):  % f % f % f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
+	printf("    mag  (NED):  % f % f % f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
+	printf("    baro:        %f (mBar) \n"  , imu.abs_pressure);
+	printf("    altitude:    %f (m) \n"     , imu.pressure_alt);
+	printf("    temperature: %f C \n"       , imu.temperature );
+
 	printf("\n");
 
 
 	// --------------------------------------------------------------------------
-	//   READ THREAD
-	// --------------------------------------------------------------------------
-	printf("START READ THREAD \n");
-
-	result = pthread_create( &read_tid, NULL, &read_thread, NULL );
-	if ( result ) throw result;
-
-	// now we're reading pixhawk's messages
-	printf("\n");
-
-
-	// --------------------------------------------------------------------------
-	//   CHECK FOR HEARTBEAT
-	// --------------------------------------------------------------------------
-	printf("CHECK FOR HEARTBEAT\n");
-
-	while ( not vehicle_data.time_stamps.heartbeat )
-	{
-		if ( time_to_exit )
-			throw 0;
-		usleep(500000);
-	}
-
-	printf("FOUND\n");
-
-	// now we know pixhawk is sending messages
-	printf("\n");
-
-
-	// --------------------------------------------------------------------------
-	//   GET SYSTEM and COMPONENT IDs
+	//   END OF COMMANDS
 	// --------------------------------------------------------------------------
 
-	// This comes from the heartbeat, which in theory should only come from
-	// the autopilot we're directly connected to.  If there is more than one
-	// vehicle than probably can't expect to discover id's like this
-
-	// System ID
-	if ( not sysid )
-	{
-		sysid = vehicle_data.sysid;
-		printf("GOT VEHICLE SYSID:    %i\n", sysid );
-	}
-
-	// Component ID
-	if ( not autopilot_compid )
-	{
-		autopilot_compid = vehicle_data.compid;
-		printf("GOT AUTOPILOT COMPID: %i\n", autopilot_compid);
-		printf("\n");
-	}
-
-	// --------------------------------------------------------------------------
-	//   GET INITIAL POSITION
-	// --------------------------------------------------------------------------
-
-	// Wait for initial position ned
-	while ( not ( vehicle_data.time_stamps.local_position_ned &&
-			  	  vehicle_data.time_stamps.attitude            )  )
-	{
-		usleep(500000);
-	}
-
-	// copy initial position ned
-	Vehicle_Data local_data = vehicle_data;
-	position_initial.x            = local_data.local_position_ned.x;
-	position_initial.y            = local_data.local_position_ned.y;
-	position_initial.z            = local_data.local_position_ned.z;
-	position_initial.vx           = local_data.local_position_ned.vx;
-	position_initial.vy           = local_data.local_position_ned.vy;
-	position_initial.vz           = local_data.local_position_ned.vz;
-	position_initial.yaw          = local_data.attitude.yaw;
-	position_initial.yaw_rate     = local_data.attitude.yawspeed;
-
-	printf("POSITION_INITIAL XYZ = [ %.4f , %.4f , %.4f ] \n", position_initial.x, position_initial.y, position_initial.z);
-	printf("POSITION_INITIAL YAW = %.4f \n", position_initial.yaw);
-	printf("\n");
-
-	// we need this before starting the write thread
-
-
-	// --------------------------------------------------------------------------
-	//   WRITE THREAD
-	// --------------------------------------------------------------------------
-	printf("START WRITE THREAD \n");
-
-	result = pthread_create( &write_tid, NULL, &write_thread, NULL );
-	if ( result ) throw result;
-
-	while ( not write_thread_running )
-		usleep(100000); // 10Hz
-
-	// now we're streaming setpoint commands
-	printf("\n");
-
-
-	// Done!
 	return;
 
 }
 
 
-// ------------------------------------------------------------------------------
-//   SHUTDOWN
-// ------------------------------------------------------------------------------
-
-void shutdown()
-{
-	// --------------------------------------------------------------------------
-	//   CLOSE THREADS
-	// --------------------------------------------------------------------------
-	printf("CLOSE THREADS\n");
-	printf("\n");
-
-	// signal exit
-	time_to_exit = true;
-
-	// wait for exit
-	pthread_join(read_tid,NULL);
-	pthread_join(write_tid,NULL);
-
-	// now the read and write threads are closed
-	printf("\n");
-
-	// --------------------------------------------------------------------------
-	//   CLOSE PORT
-	// --------------------------------------------------------------------------
-	printf("CLOSE PORT\n");
-
-	serial_port.close_serial();
-
-	// now the serial port is closed
-	printf("\n");
-}
-
-
-// ------------------------------------------------------------------------------
-//   Read Thread
-// ------------------------------------------------------------------------------
-
-void*
-read_thread(void *arg)
-{
-	while ( not time_to_exit )
-	{
-		read_message();
-		usleep(100000); // Read batches at 10Hz
-	}
-	return NULL;
-}
-
-
-// ------------------------------------------------------------------------------
-//   Read Messages
-// ------------------------------------------------------------------------------
-
-int
-read_message()
-{
-	bool success;               // receive success flag
-	bool received_all = false;  // receive only one message
-	Time_Stamps this_timestamps;
-
-	// Blocking wait for new data
-	while ( not received_all )
-	{
-		// ----------------------------------------------------------------------
-		//   READ MESSAGE
-		// ----------------------------------------------------------------------
-		mavlink_message_t message;
-		success = serial_port.read_serial(message);
-
-		// ----------------------------------------------------------------------
-		//   HANDLE MESSAGE
-		// ----------------------------------------------------------------------
-		if( success )
-		{
-			// Handle Message ID
-			switch (message.msgid)
-			{
-
-				case MAVLINK_MSG_ID_HEARTBEAT:
-				{
-					//printf("MAVLINK_MSG_ID_HEARTBEAT\n");
-					mavlink_msg_heartbeat_decode(&message, &(vehicle_data.heartbeat));
-					vehicle_data.sysid  = message.sysid;
-					vehicle_data.compid = message.compid;
-					vehicle_data.time_stamps.heartbeat = get_time_usec();
-					this_timestamps.heartbeat = vehicle_data.time_stamps.heartbeat;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_SYS_STATUS:
-				{
-					//printf("MAVLINK_MSG_ID_SYS_STATUS\n");
-					mavlink_msg_sys_status_decode(&message, &(vehicle_data.sys_status));
-					vehicle_data.time_stamps.sys_status = get_time_usec();
-					this_timestamps.sys_status = vehicle_data.time_stamps.sys_status;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_BATTERY_STATUS:
-				{
-					//printf("MAVLINK_MSG_ID_BATTERY_STATUS\n");
-					mavlink_msg_battery_status_decode(&message, &(vehicle_data.battery_status));
-					vehicle_data.time_stamps.battery_status = get_time_usec();
-					this_timestamps.battery_status = vehicle_data.time_stamps.battery_status;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_RADIO_STATUS:
-				{
-					//printf("MAVLINK_MSG_ID_RADIO_STATUS\n");
-					mavlink_msg_radio_status_decode(&message, &(vehicle_data.radio_status));
-					vehicle_data.time_stamps.radio_status = get_time_usec();
-					this_timestamps.radio_status = vehicle_data.time_stamps.radio_status;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_LOCAL_POSITION_NED:
-				{
-					//printf("MAVLINK_MSG_ID_LOCAL_POSITION_NED\n");
-					mavlink_msg_local_position_ned_decode(&message, &(vehicle_data.local_position_ned));
-					vehicle_data.time_stamps.local_position_ned = get_time_usec();
-					this_timestamps.local_position_ned = vehicle_data.time_stamps.local_position_ned;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_GLOBAL_POSITION_INT:
-				{
-					//printf("MAVLINK_MSG_ID_GLOBAL_POSITION_INT\n");
-					mavlink_msg_global_position_int_decode(&message, &(vehicle_data.global_position_int));
-					vehicle_data.time_stamps.global_position_int = get_time_usec();
-					this_timestamps.global_position_int = vehicle_data.time_stamps.global_position_int;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_POSITION_TARGET_LOCAL_NED:
-				{
-					//printf("MAVLINK_MSG_ID_POSITION_TARGET_LOCAL_NED\n");
-					mavlink_msg_position_target_local_ned_decode(&message, &(vehicle_data.position_target_local_ned));
-					vehicle_data.time_stamps.position_target_local_ned = get_time_usec();
-					this_timestamps.position_target_local_ned = vehicle_data.time_stamps.position_target_local_ned;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_POSITION_TARGET_GLOBAL_INT:
-				{
-					//printf("MAVLINK_MSG_ID_POSITION_TARGET_GLOBAL_INT\n");
-					mavlink_msg_position_target_global_int_decode(&message, &(vehicle_data.position_target_global_int));
-					vehicle_data.time_stamps.position_target_global_int = get_time_usec();
-					this_timestamps.position_target_global_int = vehicle_data.time_stamps.position_target_global_int;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_HIGHRES_IMU:
-				{
-					//printf("MAVLINK_MSG_ID_HIGHRES_IMU\n");
-					mavlink_msg_highres_imu_decode(&message, &(vehicle_data.highres_imu));
-					vehicle_data.time_stamps.highres_imu = get_time_usec();
-					this_timestamps.highres_imu = vehicle_data.time_stamps.highres_imu;
-					break;
-				}
-
-				case MAVLINK_MSG_ID_ATTITUDE:
-				{
-					//printf("MAVLINK_MSG_ID_ATTITUDE\n");
-					mavlink_msg_attitude_decode(&message, &(vehicle_data.attitude));
-					vehicle_data.time_stamps.attitude = get_time_usec();
-					this_timestamps.attitude = vehicle_data.time_stamps.attitude;
-					break;
-				}
-
-			} // end: switch msgid
-
-		} // end: if read message
-
-		// Check for receipt of all items
-		received_all =
-				this_timestamps.heartbeat                  &&
-				this_timestamps.sys_status                 &&
-//				this_timestamps.battery_status             &&
-//				this_timestamps.radio_status               &&
-				this_timestamps.local_position_ned         &&
-//				this_timestamps.global_position_int        &&
-//				this_timestamps.position_target_local_ned  &&
-				this_timestamps.position_target_global_int &&
-				this_timestamps.highres_imu                &&
-				this_timestamps.attitude                   ;
-
-		// give the write thread time to use the port
-		if ( write_thread_running )
-			usleep(100); // look for components of batches at 10kHz
-
-	} // end: while not received all
-
-	/*
-	// Do something with the messages
-
-	mavlink_heartbeat_t hb = vehicle_data.heartbeat;
-	printf("Got message HEARTBEAT (spec: https://pixhawk.ethz.ch/mavlink/#HEARTBEAT)\n");
-	printf("    type:          %i\n", hb.type);
-	printf("    sysid:         %i\n", vehicle_data.sysid);
-	printf("    compid:        %i\n", vehicle_data.compid);
-	printf("    autopilot:     %i\n", hb.autopilot);
-	printf("    base_mode:     %i\n", hb.base_mode);
-	printf("    custom_mode:   %i\n", hb.custom_mode);
-	printf("    system_status: %i\n", hb.system_status);
-	printf("    timestamp:     %lu\n", vehicle_data.time_stamps.heartbeat);
-
-	mavlink_sys_status_t st = vehicle_data.sys_status;
-	printf("Got message SYS_STATUS (spec: https://pixhawk.ethz.ch/mavlink/#SYS_STATUS)\n");
-	printf("    load:              %i\n", st.load);
-	printf("    voltage_battery:   %i\n", st.voltage_battery);
-	printf("    current_battery:   %i\n", st.current_battery);
-	printf("    battery_remaining: %i\n", st.battery_remaining);
-	printf("    timestamp:         %lu\n", vehicle_data.time_stamps.sys_status);
-
-	mavlink_highres_imu_t imu = vehicle_data.highres_imu;
-	printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
-	printf("    time:        %lu \n", imu.time_usec);
-	printf("    acc  (NED):  %f %f %f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
-	printf("    gyro (NED):  %f %f %f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
-	printf("    mag  (NED):  %f %f %f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
-	printf("    baro:        %f (mBar) \n"  , imu.abs_pressure);
-	printf("    altitude:    %f (m) \n"     , imu.pressure_alt);
-	printf("    temperature: %f C \n"       , imu.temperature );
-	printf("    timestamp:   %lu \n"        , vehicle_data.time_stamps.sys_status);
-
-
-	mavlink_local_position_ned_t pos = vehicle_data.local_position_ned;
-	printf("Got message LOCAL_POSITION_NED (spec: https://pixhawk.ethz.ch/mavlink/#LOCAL_POSITION_NED)\n");
-	printf("    pos  (NED):  %f %f %f (m)\n", pos.x, pos.y, pos.z );
-
-	printf("\n");
-
-	 */
-
-//	mavlink_local_position_ned_t pos = vehicle_data.local_position_ned;
-//	printf("\n");
-//	printf("%lu POSITION_CURRENT = [ %f , %f , %f ] \n", write_count, pos.x, pos.y, pos.z);
-//	printf("\n");
-
-	return 0;
-}
-
-
-// ------------------------------------------------------------------------------
-//   Write Thread
-// ------------------------------------------------------------------------------
-
-void*
-write_thread(void *arg)
-{
-
-	// prepare an initial setpoint, just stay put
-	mavlink_set_position_target_local_ned_t sp;
-	sp.type_mask = MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY &
-				   MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE;
-	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
-	sp.vx       = 0.0;
-	sp.vy       = 0.0;
-	sp.vz       = 0.0;
-	sp.yaw_rate = 0.0;
-
-	// set position target
-	position_target = sp;
-
-	// write a message and signal start
-	write_message();
-	write_thread_running = true;
-
-	// Pixhawk needs to see off-board commands at minimum 2Hz,
-	// otherwise it will go into fail safe
-	while ( not time_to_exit )
-	{
-		usleep(250000);   // Stream at 4Hz
-		write_message();
-	}
-
-	// signal end
-	write_thread_running = false;
-
-	return NULL;
-}
-
-
-// ------------------------------------------------------------------------------
-//   Write Messages
-// ------------------------------------------------------------------------------
-
-int
-write_message()
-{
-	// --------------------------------------------------------------------------
-	//   PACK PAYLOAD
-	// --------------------------------------------------------------------------
-
-	// pull from position target
-	mavlink_set_position_target_local_ned_t sp = position_target;
-
-	// double check some system parameters
-	sp.time_boot_ms     = 0;
-	sp.target_system    = sysid;
-	sp.target_component = autopilot_compid;
-
-	// --------------------------------------------------------------------------
-	//   ENCODE
-	// --------------------------------------------------------------------------
-
-	mavlink_message_t message;
-	mavlink_msg_set_position_target_local_ned_encode(sysid, compid, &message, &sp);
-
-	// --------------------------------------------------------------------------
-	//   WRITE
-	// --------------------------------------------------------------------------
-
-	// do the write
-	int len = serial_port.write_serial(message);
-
-	// check the write
-	if ( not len > 0 )
-		fprintf(stderr,"WARNING: could not send POSITION_TARGET_LOCAL_NED \n");
-//	else
-//		printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
-
-	// book keep
-	write_count++;
-
-	// Done!
-	return 0;
-}
-
 
 // ------------------------------------------------------------------------------
 //   Parse Command Line
 // ------------------------------------------------------------------------------
-/**
- * throws EXIT_FAILURE if could not open the port
- */
+// throws EXIT_FAILURE if could not open the port
 void
 parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 {
 
+	// string for command line usage
 	const char *commandline_usage = "usage: mavlink_serial -d <devicename> -b <baudrate>";
-	int i;
 
 	// Read input arguments
-	for (i = 1; i < argc; i++) { // argv[0] is "mavlink"
+	for (int i = 1; i < argc; i++) { // argv[0] is "mavlink"
 
 		// Help
 		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -792,22 +282,38 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 	return;
 }
 
-
 // ------------------------------------------------------------------------------
-//    Handle CTRL-C terminate commands from the terminal
+//   Quit Signal Handler
 // ------------------------------------------------------------------------------
+// this function is called when you press Ctrl-C
 void
-quit_handler(int sig)
+quit_handler( int sig )
 {
-	printf("Terminating at user's request\n");
-	time_to_exit = true;
+	printf("\n");
+	printf("TERMINATING AT USER REQUEST\n");
+	printf("\n");
+
+	// autopilot interface
+	try {
+		autopilot_interface_quit->handle_quit(sig);
+	}
+	catch (int error){}
+
+	// serial port
+	try {
+		serial_port_quit->handle_quit(sig);
+	}
+	catch (int error){}
+
+	// end program here
+	exit(0);
+
 }
 
 
 // ------------------------------------------------------------------------------
 //   Main
 // ------------------------------------------------------------------------------
-
 int
 main(int argc, char **argv)
 {
@@ -820,6 +326,7 @@ main(int argc, char **argv)
 
 	catch ( int error )
 	{
+		fprintf(stderr,"mavlink_control threw exception %i \n" , error);
 		return error;
 	}
 

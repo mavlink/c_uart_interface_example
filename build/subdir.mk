@@ -4,14 +4,17 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
+../autopilot_interface.cpp \
 ../mavlink_control.cpp \
 ../serial_port.cpp 
 
 OBJS += \
+./autopilot_interface.o \
 ./mavlink_control.o \
 ./serial_port.o 
 
 CPP_DEPS += \
+./autopilot_interface.d \
 ./mavlink_control.d \
 ./serial_port.d 
 
