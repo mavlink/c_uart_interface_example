@@ -35,19 +35,13 @@ void
 set_position(float x, float y, float z, mavlink_set_position_target_local_ned_t &sp)
 {
 	sp.type_mask =
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION &
-		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_VELOCITY ;
+		MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_POSITION;
 
 	sp.coordinate_frame = MAV_FRAME_LOCAL_NED;
 
 	sp.x   = x;
 	sp.y   = y;
 	sp.z   = z;
-
-	// this is needed for now to avoid a throttle cut...
-	sp.vx  = 0.0;
-	sp.vy  = 0.0;
-	sp.vz  = 0.0;
 
 	printf("POSITION SETPOINT XYZ = [ %.4f , %.4f , %.4f ] \n", sp.x, sp.y, sp.z);
 
@@ -471,8 +465,8 @@ toggle_offboard_control( bool flag )
 	mavlink_command_long_t com;
 	com.target_system    = system_id;
 	com.target_component = autopilot_id;
-	com.param1           = (float) flag; // flag >0.5 => start, <0.5 => stop
 	com.command          = MAV_CMD_NAV_GUIDED_ENABLE;
+	com.param1           = (float) flag; // flag >0.5 => start, <0.5 => stop
 
 	// Encode
 	mavlink_message_t message;

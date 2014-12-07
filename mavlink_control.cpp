@@ -156,19 +156,19 @@ commands(Autopilot_Interface &api)
 
 
 	// Example 1 - Set Velocity
-	set_velocity( -1.0       , // [m/s]
-				  -1.0       , // [m/s]
-				   0.0       , // [m/s]
-				   sp        );
+//	set_velocity( -1.0       , // [m/s]
+//				  -1.0       , // [m/s]
+//				   0.0       , // [m/s]
+//				   sp        );
 
 	// Example 2 - Set Position
-	// set_position( ip.x - 5.0 , // [m]
-	//			  ip.y - 5.0 , // [m]
-	//			  ip.z       , // [m]
-	//			  sp         );
+	 set_position( ip.x - 5.0 , // [m]
+			 	   ip.y - 5.0 , // [m]
+				   ip.z       , // [m]
+				   sp         );
 
 
-	// Example 1.2 - Add Velocity
+	// Example 1.2 - Append Yaw Command
 	set_yaw( ip.yaw , // [rad]
 			 sp     );
 
