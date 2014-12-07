@@ -10,19 +10,20 @@ Building
 ========
 
 ```
-$ cd c_uart_interface_example/build/
+$ cd c_uart_interface_example/
 $ make
 ```
 
-This example was developed in Eclipse, and a .project file is available in this repository.
-
-Harware Setup
+Hardware Setup
 =========
 
 Connect the USB programming cable to your Pixhawk.  
 
 If you want to be able to interact with this example in Pixhawk's NuttX shell, you'll need a Telemetry Radio or an FTDI developer's cable.  See the Exploration section below for more detail.
 
+Note: Serial 5's receive pin is occupied by a second NuttX shell and can't be used to receive data without reconfiguration.
+
+Also Note: Using a UART (serial) connection should be preferred over using the USB port for flying systems.  The reason being that the driver for the USB port is much more complicated, so the UART is a much more trusted port for flight-critical functions.  To learn how this works though the USB port will be fine and instructive.
 
 Execution
 =========
@@ -37,9 +38,19 @@ screen /dev/ttyACM0 57600 8N1
 
 You have to pick a port name, if the above example doesn't work, try searching for it with 
 ```
-$ ls /dev/ttyACM*
+
+$ ls /dev/ttyACM* 
 $ ls /dev/ttyUSB*
 ```
+
+Alternatively, plug in Pixhawk USB cable again and issue the command:
+```
+$ dmesg
+```
+The device described at the bottom of dmesg's output will be the port on which the Pixhawk is mounted. 
+
+The Pixhawk USB port will show up on a ```ttyACM*```, an FTDI cable will show up on a ```ttyUSB*```.
+
 
 2. Start a mavlink session on Pixhawk's USB port
 -----------------------
@@ -56,31 +67,62 @@ Exit screen with the key sequence: ```Ctrl+A , K, Y```
 -----------------------------
 
 ```
-$ cd c_uart_interface_example/build
-$ ./c_uart_interface_example -d /dev/ttyACM0
+$ cd c_uart_interface_example/
+$ ./mavlink_control -d /dev/ttyACM0
 ```
 
-Here's an example output
+To stop the program, use the key sequence ```Ctrl-C```.
+
+Here's an example output:
 
 ```
 OPEN PORT
-Connected to /dev/ttyACM0 with 57600 baud, 8 data bits, no parity, 1 stop bit (8N1)
+Connected to /dev/ttyUSB0 with 57600 baud, 8 data bits, no parity, 1 stop bit (8N1)
 
-READ MAVLINK
+START READ THREAD 
+
+CHECK FOR HEARTBEAT
+Found
+
+GOT VEHICLE SYSTEM ID: 1
+GOT AUTOPILOT COMPONENT ID: 50
+
+INITIAL POSITION XYZ = [ 8.2935 , -1.1447 , -0.7609 ] 
+INITIAL POSITION YAW = 2.1539 
+
+START WRITE THREAD 
+
+ENABLE OFFBOARD MODE
+
+SEND OFFBOARD COMMANDS
+POSITION SETPOINT XYZ = [ 3.2935 , -6.1447 , -0.7609 ] 
+POSITION SETPOINT YAW = 2.1539 
+0 CURRENT POSITION XYZ = [  8.2935 , -1.1447 , -0.7609 ] 
+1 CURRENT POSITION XYZ = [  8.2935 , -1.1447 , -0.7609 ] 
+2 CURRENT POSITION XYZ = [  8.2524 , -1.1444 , -0.7667 ] 
+3 CURRENT POSITION XYZ = [  8.2205 , -1.1431 , -0.7747 ] 
+4 CURRENT POSITION XYZ = [  8.1920 , -1.1421 , -0.7737 ] 
+5 CURRENT POSITION XYZ = [  8.1920 , -1.1421 , -0.7737 ] 
+6 CURRENT POSITION XYZ = [  8.1539 , -1.1414 , -0.7847 ] 
+7 CURRENT POSITION XYZ = [  8.1522 , -1.1417 , -0.7820 ] 
+
+DISABLE OFFBOARD MODE
+
+READ SOME MESSAGES 
+Got message LOCAL_POSITION_NED (spec: https://pixhawk.ethz.ch/mavlink/#LOCAL_POSITION_NED)
+    pos  (NED):  8.152975 -1.141093 -0.784075 (m)
 Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)
-	 time: 22146030
-	 acc  (NED):	 0.452423	-0.052777	-9.760157 (m/s^2)
-	 gyro (NED):	-0.004391	-0.002016	-0.004369 (rad/s)
-	 mag  (NED):	-0.215094	 0.394682	 1.033930 (Ga)
-	 baro: 	 1018.009949 (mBar)
-	 altitude: 	 -39.547714 (m)
-	 temperature: 	 43.639999 C
+    ap time:     3611390110 
+    acc  (NED):   0.005503  0.044659 -9.740363 (m/s^2)
+    gyro (NED):  -0.003064  0.003857  0.000005 (rad/s)
+    mag  (NED):  -0.117767 -0.335362 -0.253204 (Ga)
+    baro:        1020.519958 (mBar) 
+    altitude:    -60.341393 (m) 
+    temperature: 46.779999 C 
 
-SEND MAVLINK
-Sent buffer of length 61
+CLOSE THREADS
 
 CLOSE PORT
-Port closed
 ```
 
 Exploration
@@ -124,12 +166,24 @@ On the off-board side, in another terminal run the ```c_uart_interface_example``
 
 ```
 HANDLE MESSAGE
+MSGID:76
+
+HANDLE MESSAGE
 MSGID:84
+
+(...)
+
+HANDLE MESSAGE
+MSGID:84
+
+HANDLE MESSAGE
+MSGID:76
 ```
 
 Past this, you can:
 - Modify the received message data type
 - Modify the sent message data type
+
 
 
 
