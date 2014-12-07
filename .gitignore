@@ -1,7 +1,19 @@
+
+# unix files
+*~
+
+# eclipse
+.settings/
+build/
+.cproject
+.project
+
+# build
 *.o
 *.d
 mavlink_control
-c_uart_interface_example
+
+# mac
 .DS_Store
-.settings/
-/Debug/
+
+
