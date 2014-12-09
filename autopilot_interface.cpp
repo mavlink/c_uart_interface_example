@@ -56,6 +56,18 @@
 
 
 // ----------------------------------------------------------------------------------
+//   Time
+// ------------------- ---------------------------------------------------------------
+uint64_t
+get_time_usec()
+{
+	static struct timeval _time_stamp;
+	gettimeofday(&_time_stamp, NULL);
+	return _time_stamp.tv_sec*1000000 + _time_stamp.tv_usec;
+}
+
+
+// ----------------------------------------------------------------------------------
 //   Setpoint Helper Functions
 // ----------------------------------------------------------------------------------
 
@@ -101,7 +113,7 @@ set_velocity(float vx, float vy, float vz, mavlink_set_position_target_local_ned
 	sp.vy  = vy;
 	sp.vz  = vz;
 
-	printf("VELOCITY SETPOINT UVW = [ %.4f , %.4f , %.4f ] \n", sp.vx, sp.vy, sp.vz);
+	//printf("VELOCITY SETPOINT UVW = [ %.4f , %.4f , %.4f ] \n", sp.vx, sp.vy, sp.vz);
 
 }
 
@@ -464,6 +476,7 @@ void
 Autopilot_Interface::
 disable_offboard_control()
 {
+
 	// Should only send this command once
 	if ( control_status == true )
 	{
@@ -488,6 +501,7 @@ disable_offboard_control()
 		printf("\n");
 
 	} // end: if offboard_status
+
 }
 
 
@@ -722,9 +736,7 @@ void
 Autopilot_Interface::
 handle_quit( int sig )
 {
-
 	disable_offboard_control();
-
 	// autopilot interface
 	try {
 		stop();
