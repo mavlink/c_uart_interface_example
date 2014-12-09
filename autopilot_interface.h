@@ -114,16 +114,9 @@
 //   Prototypes
 // ------------------------------------------------------------------------------
 
-static struct timeval _time_stamp;
-
-uint64_t
-static get_time_usec()
-{
-	gettimeofday(&_time_stamp, NULL);
-	return _time_stamp.tv_sec*1000000 + _time_stamp.tv_usec;
-}
 
 // helper functions
+uint64_t get_time_usec();
 void set_position(float x, float y, float z, mavlink_set_position_target_local_ned_t &sp);
 void set_velocity(float vx, float vy, float vz, mavlink_set_position_target_local_ned_t &sp);
 void set_acceleration(float ax, float ay, float az, mavlink_set_position_target_local_ned_t &sp);
