@@ -391,7 +391,8 @@ write_setpoint()
 	mavlink_set_position_target_local_ned_t sp = current_setpoint;
 
 	// double check some system parameters
-	sp.time_boot_ms     = 0;
+	if ( not sp.time_boot_ms )
+		sp.time_boot_ms = (uint32_t) (get_time_usec()/1000);
 	sp.target_system    = system_id;
 	sp.target_component = autopilot_id;
 
@@ -502,6 +503,7 @@ toggle_offboard_control( bool flag )
 	com.target_system    = system_id;
 	com.target_component = autopilot_id;
 	com.command          = MAV_CMD_NAV_GUIDED_ENABLE;
+	com.confirmation     = true;
 	com.param1           = (float) flag; // flag >0.5 => start, <0.5 => stop
 
 	// Encode
