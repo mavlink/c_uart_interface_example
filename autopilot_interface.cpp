@@ -204,6 +204,9 @@ Autopilot_Interface(Serial_Port *serial_port_)
 	autopilot_id = 0; // autopilot component id
 	companion_id = 0; // companion computer component id
 
+	current_messages.sysid  = system_id;
+	current_messages.compid = autopilot_id;
+
 	serial_port = serial_port_; // serial port management object
 
 }
@@ -249,6 +252,12 @@ read_messages()
 		// ----------------------------------------------------------------------
 		if( success )
 		{
+
+			// Store message sysid and compid.
+			// Note this doesn't handle multiple message sources.
+			current_messages.sysid  = message.sysid;
+			current_messages.compid = message.compid;
+
 			// Handle Message ID
 			switch (message.msgid)
 			{
@@ -257,8 +266,6 @@ read_messages()
 				{
 					//printf("MAVLINK_MSG_ID_HEARTBEAT\n");
 					mavlink_msg_heartbeat_decode(&message, &(current_messages.heartbeat));
-					current_messages.sysid  = message.sysid;
-					current_messages.compid = message.compid;
 					current_messages.time_stamps.heartbeat = get_time_usec();
 					this_timestamps.heartbeat = current_messages.time_stamps.heartbeat;
 					break;
@@ -344,6 +351,13 @@ read_messages()
 					this_timestamps.attitude = current_messages.time_stamps.attitude;
 					break;
 				}
+
+				default:
+				{
+					// printf("Warning, did not handle message id %i\n",message.msgid);
+					break;
+				}
+
 
 			} // end: switch msgid
 
@@ -566,12 +580,12 @@ start()
 
 
 	// --------------------------------------------------------------------------
-	//   CHECK FOR HEARTBEAT
-	// -----------------------s---------------------------------------------------
+	//   CHECK FOR MESSAGES
+	// --------------------------------------------------------------------------
 
-	printf("CHECK FOR HEARTBEAT\n");
+	printf("CHECK FOR MESSAGES\n");
 
-	while ( not current_messages.time_stamps.heartbeat )
+	while ( not current_messages.sysid )
 	{
 		if ( time_to_exit )
 			throw 0;
