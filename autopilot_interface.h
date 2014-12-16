@@ -169,7 +169,7 @@ struct Time_Stamps
 
 // Struct containing information on the MAV we are currently connected to
 
-struct Vehicle_Messages {
+struct Mavlink_Messages {
 
 	int sysid;
 	int compid;
@@ -254,7 +254,7 @@ public:
 	int autopilot_id;
 	int companion_id;
 
-	Vehicle_Messages current_messages;
+	Mavlink_Messages current_messages;
 	mavlink_set_position_target_local_ned_t initial_position;
 
 	void update_setpoint(mavlink_set_position_target_local_ned_t setpoint);

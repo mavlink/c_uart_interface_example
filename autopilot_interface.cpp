@@ -239,7 +239,7 @@ read_messages()
 	Time_Stamps this_timestamps;
 
 	// Blocking wait for new data
-	while ( not received_all )
+	while ( not received_all and not time_to_exit )
 	{
 		// ----------------------------------------------------------------------
 		//   READ MESSAGE
@@ -588,7 +588,7 @@ start()
 	while ( not current_messages.sysid )
 	{
 		if ( time_to_exit )
-			throw 0;
+			return;
 		usleep(500000); // check at 2Hz
 	}
 
@@ -631,11 +631,13 @@ start()
 	while ( not ( current_messages.time_stamps.local_position_ned &&
 				  current_messages.time_stamps.attitude            )  )
 	{
+		if ( time_to_exit )
+			return;
 		usleep(500000);
 	}
 
 	// copy initial position ned
-	Vehicle_Messages local_data = current_messages;
+	Mavlink_Messages local_data = current_messages;
 	initial_position.x        = local_data.local_position_ned.x;
 	initial_position.y        = local_data.local_position_ned.y;
 	initial_position.z        = local_data.local_position_ned.z;
@@ -750,8 +752,9 @@ void
 Autopilot_Interface::
 handle_quit( int sig )
 {
+
 	disable_offboard_control();
-	// autopilot interface
+
 	try {
 		stop();
 

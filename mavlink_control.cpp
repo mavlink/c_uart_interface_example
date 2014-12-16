@@ -237,7 +237,7 @@ commands(Autopilot_Interface &api)
 	printf("READ SOME MESSAGES \n");
 
 	// copy current messages
-	Vehicle_Messages messages = api.current_messages;
+	Mavlink_Messages messages = api.current_messages;
 
 	// local position in ned frame
 	mavlink_local_position_ned_t pos = messages.local_position_ned;
