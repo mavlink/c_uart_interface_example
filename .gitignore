@@ -1,4 +1,22 @@
+
+# unix files
+*~
+
+# eclipse
+.settings/
+build/
+.cproject
+.project
+
+# build
 *.o
-mavlink_serial
-send_quad_commands
+*.d
+mavlink_control
+
+# mac
 .DS_Store
+
+
+/build/
+/Debug/
+
