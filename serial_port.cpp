@@ -63,7 +63,7 @@
 //   Con/De structors
 // ------------------------------------------------------------------------------
 Serial_Port::
-Serial_Port(char *&uart_name_ , int &baudrate_)
+Serial_Port(const char *uart_name_ , int baudrate_)
 {
 	initialize_defaults();
 	uart_name = uart_name_;
@@ -190,7 +190,7 @@ read_message(mavlink_message_t &message)
 // ------------------------------------------------------------------------------
 int
 Serial_Port::
-write_message(mavlink_message_t &message)
+write_message(const mavlink_message_t &message)
 {
 	char buf[300];
 
@@ -198,9 +198,9 @@ write_message(mavlink_message_t &message)
 	unsigned len = mavlink_msg_to_send_buffer((uint8_t*)buf, &message);
 
 	// Write buffer to serial port, locks port while writing
-	_write_port(buf,len);
+	int bytesWritten = _write_port(buf,len);
 
-	return len;
+	return bytesWritten;
 }
 
 
@@ -520,16 +520,16 @@ _read_port(uint8_t &cp)
 // ------------------------------------------------------------------------------
 //   Write Port with Lock
 // ------------------------------------------------------------------------------
-void
+int
 Serial_Port::
-_write_port(char *buf, unsigned &len)
+_write_port(char *buf, unsigned len)
 {
 
 	// Lock
 	pthread_mutex_lock(&lock);
 
 	// Write packet via serial link
-	write(fd, buf, len);
+	const int bytesWritten = static_cast<int>(write(fd, buf, len));
 
 	// Wait until all data has been written
 	tcdrain(fd);
@@ -537,7 +537,8 @@ _write_port(char *buf, unsigned &len)
 	// Unlock
 	pthread_mutex_unlock(&lock);
 
-	return;
+
+	return bytesWritten;
 }
 
 
