@@ -527,7 +527,7 @@ Autopilot_Interface::
 toggle_offboard_control( bool flag )
 {
 	// Prepare command for off-board mode
-	mavlink_command_long_t com;
+	mavlink_command_long_t com = { 0 };
 	com.target_system    = system_id;
 	com.target_component = autopilot_id;
 	com.command          = MAV_CMD_NAV_GUIDED_ENABLE;
