@@ -239,7 +239,7 @@ read_messages()
 	Time_Stamps this_timestamps;
 
 	// Blocking wait for new data
-	while ( not received_all and not time_to_exit )
+	while ( !received_all and !time_to_exit )
 	{
 		// ----------------------------------------------------------------------
 		//   READ MESSAGE
@@ -366,19 +366,21 @@ read_messages()
 		// Check for receipt of all items
 		received_all =
 				this_timestamps.heartbeat                  &&
-				this_timestamps.sys_status                 &&
 //				this_timestamps.battery_status             &&
 //				this_timestamps.radio_status               &&
-				this_timestamps.local_position_ned         &&
+//				this_timestamps.local_position_ned         &&
 //				this_timestamps.global_position_int        &&
 //				this_timestamps.position_target_local_ned  &&
-				this_timestamps.position_target_global_int &&
-				this_timestamps.highres_imu                &&
-				this_timestamps.attitude                   ;
+//				this_timestamps.position_target_global_int &&
+//				this_timestamps.highres_imu                &&
+//				this_timestamps.attitude                   &&
+				this_timestamps.sys_status
+				;
 
 		// give the write thread time to use the port
-		if ( writing_status > false )
+		if ( writing_status > false ) {
 			usleep(100); // look for components of batches at 10kHz
+		}
 
 	} // end: while not received all
 
@@ -439,7 +441,7 @@ write_setpoint()
 	int len = write_message(message);
 
 	// check the write
-	if ( not len > 0 )
+	if ( len <= 0 )
 		fprintf(stderr,"WARNING: could not send POSITION_TARGET_LOCAL_NED \n");
 	//	else
 	//		printf("%lu POSITION_TARGET  = [ %f , %f , %f ] \n", write_count, position_target.x, position_target.y, position_target.z);
@@ -559,7 +561,7 @@ start()
 	//   CHECK SERIAL PORT
 	// --------------------------------------------------------------------------
 
-	if ( not serial_port->status == 1 ) // SERIAL_PORT_OPEN
+	if ( serial_port->status != 1 ) // SERIAL_PORT_OPEN
 	{
 		fprintf(stderr,"ERROR: serial port not open\n");
 		throw 1;
@@ -776,7 +778,7 @@ read_thread()
 {
 	reading_status = true;
 
-	while ( not time_to_exit )
+	while ( ! time_to_exit )
 	{
 		read_messages();
 		usleep(100000); // Read batches at 10Hz
@@ -817,7 +819,7 @@ write_thread(void)
 
 	// Pixhawk needs to see off-board commands at minimum 2Hz,
 	// otherwise it will go into fail safe
-	while ( not time_to_exit )
+	while ( !time_to_exit )
 	{
 		usleep(250000);   // Stream at 4Hz
 		write_setpoint();

@@ -68,7 +68,11 @@ top (int argc, char **argv)
 	// --------------------------------------------------------------------------
 
 	// Default input arguments
+#ifdef __APPLE__
+	char *uart_name = (char*)"/dev/tty.usbmodem1";
+#else
 	char *uart_name = (char*)"/dev/ttyUSB0";
+#endif
 	int baudrate = 57600;
 
 	// do the parse, will throw an int if it fails
@@ -247,7 +251,7 @@ commands(Autopilot_Interface &api)
 	// hires imu
 	mavlink_highres_imu_t imu = messages.highres_imu;
 	printf("Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)\n");
-	printf("    ap time:     %lu \n", imu.time_usec);
+	printf("    ap time:     %llu \n", imu.time_usec);
 	printf("    acc  (NED):  % f % f % f (m/s^2)\n", imu.xacc , imu.yacc , imu.zacc );
 	printf("    gyro (NED):  % f % f % f (rad/s)\n", imu.xgyro, imu.ygyro, imu.zgyro);
 	printf("    mag  (NED):  % f % f % f (Ga)\n"   , imu.xmag , imu.ymag , imu.zmag );
