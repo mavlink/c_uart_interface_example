@@ -11,6 +11,8 @@ Building
 
 ```
 $ cd c_uart_interface_example/
+$ git submodule init
+$ git submodule update
 $ make
 ```
 
