@@ -21,22 +21,12 @@ Connect the USB programming cable to your Pixhawk.
 
 If you want to be able to interact with this example in Pixhawk's NuttX shell, you'll need a Telemetry Radio or an FTDI developer's cable.  See the Exploration section below for more detail.
 
-Note: Serial 5's receive pin is occupied by a second NuttX shell and can't be used to receive data without reconfiguration.
-
 Also Note: Using a UART (serial) connection should be preferred over using the USB port for flying systems.  The reason being that the driver for the USB port is much more complicated, so the UART is a much more trusted port for flight-critical functions.  To learn how this works though the USB port will be fine and instructive.
 
 Execution
 =========
 
-1. Login to Pixhawk's shell
------------------------
-
-```
-screen /dev/ttyACM0 57600 8N1
-<press enter>
-```
-
-You have to pick a port name, if the above example doesn't work, try searching for it with 
+You have to pick a port name, try searching for it with 
 ```
 
 $ ls /dev/ttyACM* 
@@ -52,19 +42,7 @@ The device described at the bottom of dmesg's output will be the port on which t
 The Pixhawk USB port will show up on a ```ttyACM*```, an FTDI cable will show up on a ```ttyUSB*```.
 
 
-2. Start a mavlink session on Pixhawk's USB port
------------------------
-
-```
-nsh> mavlink start -d /dev/ttyACM0
-```
-
-Pixhawk will start dumping machine data to the shell.
-
-Exit screen with the key sequence: ```Ctrl+A , K, Y```
-
-3. Run the Example Executable
------------------------------
+Run the example executable on the host shell:
 
 ```
 $ cd c_uart_interface_example/
@@ -146,7 +124,7 @@ For steps 2 and 3 from the above tutorial, you'll use a different port.  On the 
 Now add a print statement in the Pixhawk Firmware to see received messages.  Build and upload this to Pixhawk.
 
 ```
-[Firmware/src/modules/mavlink/mavlink_receiver.cpp : line 1351]
+[Firmware/src/modules/mavlink/mavlink_receiver.cpp]
 /* if read failed, this loop won't execute */
 for (ssize_t i = 0; i < nread; i++) {
 	if (mavlink_parse_char(_mavlink->get_channel(), buf[i], &msg, &status)) {
@@ -160,7 +138,7 @@ for (ssize_t i = 0; i < nread; i++) {
 		handle_message(&msg);
 ```
 
-Screen into the NuttX shell and start a mavlink session like in the example above.  
+Open the system terminal as described here: https://dev.px4.io/en/debug/system_console.html 
 
 On the off-board side, in another terminal run the ```c_uart_interface_example``` executable. You should see output in the NuttX shell similar to this:
 
