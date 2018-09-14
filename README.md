@@ -3,7 +3,7 @@ C-UART Interface Example
 
 This is a simple MAVLink to UART interface example for *nix systems that can allow communication between Pixhawk and an offboard computer.
 
-This example will recieve one MAVlink message and send one MAVlink message.
+This example will receive one MAVLink message and send one MAVLink message.
 
 
 Building
@@ -39,7 +39,7 @@ $ dmesg
 ```
 The device described at the bottom of dmesg's output will be the port on which the Pixhawk is mounted. 
 
-The Pixhawk USB port will show up on a ```ttyACM*```, an FTDI cable will show up on a ```ttyUSB*```.
+The Pixhawk USB port will show up on a `ttyACM*`, an FTDI cable will show up on a `ttyUSB*`.
 
 
 Run the example executable on the host shell:
@@ -49,7 +49,7 @@ $ cd c_uart_interface_example/
 $ ./mavlink_control -d /dev/ttyACM0
 ```
 
-To stop the program, use the key sequence ```Ctrl-C```.
+To stop the program, use the key sequence `Ctrl-C`.
 
 Here's an example output:
 
@@ -87,9 +87,9 @@ POSITION SETPOINT YAW = 2.1539
 DISABLE OFFBOARD MODE
 
 READ SOME MESSAGES 
-Got message LOCAL_POSITION_NED (spec: https://pixhawk.ethz.ch/mavlink/#LOCAL_POSITION_NED)
+Got message LOCAL_POSITION_NED (spec: https://mavlink.io/en/messages/common.html#LOCAL_POSITION_NED)
     pos  (NED):  8.152975 -1.141093 -0.784075 (m)
-Got message HIGHRES_IMU (spec: https://pixhawk.ethz.ch/mavlink/#HIGHRES_IMU)
+Got message HIGHRES_IMU (spec: https://mavlink.io/en/messages/common.html#HIGHRES_IMU)
     ap time:     3611390110 
     acc  (NED):   0.005503  0.044659 -9.740363 (m/s^2)
     gyro (NED):  -0.003064  0.003857  0.000005 (rad/s)
@@ -108,12 +108,20 @@ Exploration
 
 There are a few things to explore past this example.
 
-First you can connect via a Telemetry Radio on Telem 1 or 2, or via an FTDI on Telem 2 or Serial 4 
-(https://pixhawk.org/dev/wiring).  Note: Serial 5's receive pin is occupied by a second NuttX shell and can't be used to receive data without reconfiguration.
+First you can connect via:
+* a [Telemetry Radio](https://docs.px4.io/en/telemetry/) on TELEM1 or 2
+* an [FTDI cable](https://www.sparkfun.com/products/9718) on TELEM2 or Serial 4
 
-With this you'll be able to start a second port for communcation, and leave the USB port available for viewing prints in the NuttX shell.  
+> **Note** 
+> * Serial 5 can't be used to receive data without reconfiguration (its receive pin is occupied by a second NuttX shell).
+> * TELEM1 is typically dedicated to Telemetry Radio, but if you're using another port you will need to make sure it is not configured for use by another peripheral.
+> * If using FTDI with a TELEM port, connect all the pins to corresponding pins on port.
+> * If using FTDI with SERIAL4 connect the TX, RX GND and 5V pins (CTS, RTS need not be connected).
 
-For steps 2 and 3 from the above tutorial, you'll use a different port.  On the off-board computer side, the port might now be ```/dev/ttyUSB0```.  On the Pixhawk side, here the port mappings are in the table below.
+
+With this you'll be able to start a second port for communication, and leave the USB port available for viewing prints in the NuttX shell.  
+
+For steps 2 and 3 from the above tutorial, you'll use a different port.  On the off-board computer side, the port might now be `/dev/ttyUSB0`.  On the Pixhawk side, here the port mappings are in the table below.
 
 | PX4 UART | NuttX UART |
 |----------|------------|
@@ -140,7 +148,7 @@ for (ssize_t i = 0; i < nread; i++) {
 
 Open the system terminal as described here: https://dev.px4.io/en/debug/system_console.html 
 
-On the off-board side, in another terminal run the ```c_uart_interface_example``` executable. You should see output in the NuttX shell similar to this:
+On the off-board side, in another terminal run the `c_uart_interface_example` executable. You should see output in the NuttX shell similar to this:
 
 ```
 HANDLE MESSAGE
@@ -161,9 +169,4 @@ MSGID:76
 Past this, you can:
 - Modify the received message data type
 - Modify the sent message data type
-
-
-
-
-
 
