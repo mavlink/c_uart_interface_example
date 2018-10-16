@@ -113,7 +113,7 @@ set_velocity(float vx, float vy, float vz, mavlink_set_position_target_local_ned
 	sp.vy  = vy;
 	sp.vz  = vz;
 
-	//printf("VELOCITY SETPOINT UVW = [ %.4f , %.4f , %.4f ] \n", sp.vx, sp.vy, sp.vz);
+	printf("VELOCITY SETPOINT UVW = [ %.4f , %.4f , %.4f ] \n", sp.vx, sp.vy, sp.vz);
 
 }
 
@@ -187,7 +187,7 @@ set_yaw_rate(float yaw_rate, mavlink_set_position_target_local_ned_t &sp)
 //   Con/De structors
 // ------------------------------------------------------------------------------
 Autopilot_Interface::
-Autopilot_Interface(Serial_Port *serial_port_)
+Autopilot_Interface(Generic_Port *port_)
 {
 	// initialize attributes
 	write_count = 0;
@@ -207,7 +207,7 @@ Autopilot_Interface(Serial_Port *serial_port_)
 	current_messages.sysid  = system_id;
 	current_messages.compid = autopilot_id;
 
-	serial_port = serial_port_; // serial port management object
+	port = port_; // port management object
 
 }
 
@@ -245,7 +245,7 @@ read_messages()
 		//   READ MESSAGE
 		// ----------------------------------------------------------------------
 		mavlink_message_t message;
-		success = serial_port->read_message(message);
+		success = port->read_message(message);
 
 		// ----------------------------------------------------------------------
 		//   HANDLE MESSAGE
@@ -395,7 +395,7 @@ Autopilot_Interface::
 write_message(mavlink_message_t message)
 {
 	// do the write
-	int len = serial_port->write_message(message);
+	int len = port->write_message(message);
 
 	// book keep
 	write_count++;
@@ -520,6 +520,41 @@ disable_offboard_control()
 
 }
 
+// ------------------------------------------------------------------------------
+//   Arm
+// ------------------------------------------------------------------------------
+int
+Autopilot_Interface::
+arm_disarm( bool flag )
+{
+	if(flag)
+	{
+		printf("ARM ROTORS\n");
+	}
+	else
+	{
+		printf("DISARM ROTORS\n");
+	}
+
+	// Prepare command for off-board mode
+	mavlink_command_long_t com = { 0 };
+	com.target_system    = system_id;
+	com.target_component = autopilot_id;
+	com.command          = MAV_CMD_COMPONENT_ARM_DISARM;
+	com.confirmation     = true;
+	com.param1           = (float) flag;
+	com.param2           = 21196;
+
+	// Encode
+	mavlink_message_t message;
+	mavlink_msg_command_long_encode(system_id, companion_id, &message, &com);
+
+	// Send the message
+	int len = port->write_message(message);
+
+	// Done!
+	return len;
+}
 
 // ------------------------------------------------------------------------------
 //   Toggle Off-Board Mode
@@ -541,7 +576,7 @@ toggle_offboard_control( bool flag )
 	mavlink_msg_command_long_encode(system_id, companion_id, &message, &com);
 
 	// Send the message
-	int len = serial_port->write_message(message);
+	int len = port->write_message(message);
 
 	// Done!
 	return len;
@@ -558,12 +593,12 @@ start()
 	int result;
 
 	// --------------------------------------------------------------------------
-	//   CHECK SERIAL PORT
+	//   CHECK PORT
 	// --------------------------------------------------------------------------
 
-	if ( serial_port->status != 1 ) // SERIAL_PORT_OPEN
+	if ( !port->is_running() ) // PORT_OPEN
 	{
-		fprintf(stderr,"ERROR: serial port not open\n");
+		fprintf(stderr,"ERROR: port not open\n");
 		throw 1;
 	}
 
@@ -700,7 +735,7 @@ stop()
 	// now the read and write threads are closed
 	printf("\n");
 
-	// still need to close the serial_port separately
+	// still need to close the port separately
 }
 
 // ------------------------------------------------------------------------------

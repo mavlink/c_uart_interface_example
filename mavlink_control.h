@@ -71,7 +71,7 @@ using namespace std;
 
 #include "autopilot_interface.h"
 #include "serial_port.h"
-
+#include "udp_port.h"
 
 // ------------------------------------------------------------------------------
 //   Prototypes
@@ -80,11 +80,12 @@ using namespace std;
 int main(int argc, char **argv);
 int top(int argc, char **argv);
 
-void commands(Autopilot_Interface &autopilot_interface);
-void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate);
+void commands(Autopilot_Interface &autopilot_interface, bool autotakeoff);
+void parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate,
+		bool &use_udp, char *&udp_ip, int &rx_port, int &tx_port, bool &autotakeoff);
 
 // quit handler
 Autopilot_Interface *autopilot_interface_quit;
-Serial_Port *serial_port_quit;
+Generic_Port *port_quit;
 void quit_handler( int sig );
 
