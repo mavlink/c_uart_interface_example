@@ -90,7 +90,7 @@ initialize_defaults()
 	// Initialize attributes
 	debug  = false;
 	fd     = -1;
-	status = SERIAL_PORT_CLOSED;
+	is_open = false;
 
 	uart_name = (char*)"/dev/ttyUSB0";
 	baudrate  = 57600;
@@ -212,7 +212,7 @@ write_message(const mavlink_message_t &message)
  */
 void
 Serial_Port::
-open_serial()
+start()
 {
 
 	// --------------------------------------------------------------------------
@@ -254,7 +254,7 @@ open_serial()
 	printf("Connected to %s with %d baud, 8 data bits, no parity, 1 stop bit (8N1)\n", uart_name, baudrate);
 	lastStatus.packet_rx_drop_count = 0;
 
-	status = true;
+	is_open = true;
 
 	printf("\n");
 
@@ -268,7 +268,7 @@ open_serial()
 // ------------------------------------------------------------------------------
 void
 Serial_Port::
-close_serial()
+stop()
 {
 	printf("CLOSE PORT\n");
 
@@ -279,46 +279,11 @@ close_serial()
 		fprintf(stderr,"WARNING: Error on port close (%i)\n", result );
 	}
 
-	status = false;
+	is_open = false;
 
 	printf("\n");
 
 }
-
-
-// ------------------------------------------------------------------------------
-//   Convenience Functions
-// ------------------------------------------------------------------------------
-void
-Serial_Port::
-start()
-{
-	open_serial();
-}
-
-void
-Serial_Port::
-stop()
-{
-	close_serial();
-}
-
-
-// ------------------------------------------------------------------------------
-//   Quit Handler
-// ------------------------------------------------------------------------------
-void
-Serial_Port::
-handle_quit( int sig )
-{
-	try {
-		stop();
-	}
-	catch (int error) {
-		fprintf(stderr,"Warning, could not stop serial port\n");
-	}
-}
-
 
 // ------------------------------------------------------------------------------
 //   Helper Function - Open Serial Port File Descriptor

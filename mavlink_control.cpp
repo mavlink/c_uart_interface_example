@@ -75,8 +75,14 @@ top (int argc, char **argv)
 #endif
 	int baudrate = 57600;
 
+	bool use_udp = false;
+	char *udp_ip = (char*)"127.0.0.1";
+	int rx_port = 14540;
+	int tx_port = 14557;
+	bool autotakeoff = false;
+
 	// do the parse, will throw an int if it fails
-	parse_commandline(argc, argv, uart_name, baudrate);
+	parse_commandline(argc, argv, uart_name, baudrate, use_udp, udp_ip, rx_port, tx_port, autotakeoff);
 
 
 	// --------------------------------------------------------------------------
@@ -84,16 +90,24 @@ top (int argc, char **argv)
 	// --------------------------------------------------------------------------
 
 	/*
-	 * Instantiate a serial port object
+	 * Instantiate a generic port object
 	 *
 	 * This object handles the opening and closing of the offboard computer's
-	 * serial port over which it will communicate to an autopilot.  It has
+	 * port over which it will communicate to an autopilot.  It has
 	 * methods to read and write a mavlink_message_t object.  To help with read
 	 * and write in the context of pthreading, it gaurds port operations with a
-	 * pthread mutex lock.
+	 * pthread mutex lock. It can be a serial or an UDP port.
 	 *
 	 */
-	Serial_Port serial_port(uart_name, baudrate);
+	Generic_Port *port;
+	if(use_udp)
+	{
+		port = new UDP_Port(udp_ip, rx_port, tx_port);
+	}
+	else
+	{
+		port = new Serial_Port(uart_name, baudrate);
+	}
 
 
 	/*
@@ -111,7 +125,7 @@ top (int argc, char **argv)
 	 * otherwise the vehicle will go into failsafe.
 	 *
 	 */
-	Autopilot_Interface autopilot_interface(&serial_port);
+	Autopilot_Interface autopilot_interface(port);
 
 	/*
 	 * Setup interrupt signal handler
@@ -121,7 +135,7 @@ top (int argc, char **argv)
 	 * The handler in this example needs references to the above objects.
 	 *
 	 */
-	serial_port_quit         = &serial_port;
+	port_quit         = port;
 	autopilot_interface_quit = &autopilot_interface;
 	signal(SIGINT,quit_handler);
 
@@ -129,7 +143,7 @@ top (int argc, char **argv)
 	 * Start the port and autopilot_interface
 	 * This is where the port is opened, and read and write threads are started.
 	 */
-	serial_port.start();
+	port->start();
 	autopilot_interface.start();
 
 
@@ -140,7 +154,7 @@ top (int argc, char **argv)
 	/*
 	 * Now we can implement the algorithm we want on top of the autopilot interface
 	 */
-	commands(autopilot_interface);
+	commands(autopilot_interface, autotakeoff);
 
 
 	// --------------------------------------------------------------------------
@@ -151,8 +165,9 @@ top (int argc, char **argv)
 	 * Now that we are done we can stop the threads and close the port
 	 */
 	autopilot_interface.stop();
-	serial_port.stop();
+	port->stop();
 
+	delete port;
 
 	// --------------------------------------------------------------------------
 	//   DONE
@@ -169,7 +184,7 @@ top (int argc, char **argv)
 // ------------------------------------------------------------------------------
 
 void
-commands(Autopilot_Interface &api)
+commands(Autopilot_Interface &api, bool autotakeoff)
 {
 
 	// --------------------------------------------------------------------------
@@ -181,6 +196,12 @@ commands(Autopilot_Interface &api)
 
 	// now the autopilot is accepting setpoint commands
 
+	if(autotakeoff)
+	{
+		// arm autopilot
+		api.arm_disarm(true);
+		usleep(100); // give some time to let it sink in
+	}
 
 	// --------------------------------------------------------------------------
 	//   SEND OFFBOARD COMMANDS
@@ -194,22 +215,18 @@ commands(Autopilot_Interface &api)
 	// autopilot_interface.h provides some helper functions to build the command
 
 
-	// Example 1 - Set Velocity
-//	set_velocity( -1.0       , // [m/s]
-//				  -1.0       , // [m/s]
-//				   0.0       , // [m/s]
-//				   sp        );
-
-	// Example 2 - Set Position
-	 set_position( ip.x - 5.0 , // [m]
-			 	   ip.y - 5.0 , // [m]
-				   ip.z       , // [m]
-				   sp         );
 
 
-	// Example 1.2 - Append Yaw Command
-	set_yaw( ip.yaw , // [rad]
-			 sp     );
+	// Example 1 - Fly up by to 2m
+	set_position( ip.x ,       // [m]
+			 	  ip.y ,       // [m]
+				  ip.z - 2.0 , // [m]
+				  sp         );
+
+	if(autotakeoff)
+	{
+		sp.type_mask |= MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_TAKEOFF;
+	}
 
 	// SEND THE COMMAND
 	api.update_setpoint(sp);
@@ -223,8 +240,57 @@ commands(Autopilot_Interface &api)
 		sleep(1);
 	}
 
-	printf("\n");
 
+	// Example 2 - Set Velocity
+	set_velocity( -1.0       , // [m/s]
+				  -1.0       , // [m/s]
+				   0.0       , // [m/s]
+				   sp        );
+
+	// Example 2.1 - Append Yaw Command
+	set_yaw( ip.yaw + 90.0/180.0*M_PI, // [rad]
+			 sp     );
+
+	// SEND THE COMMAND
+	api.update_setpoint(sp);
+	// NOW pixhawk will try to move
+
+	// Wait for 4 seconds, check position
+	for (int i=0; i < 4; i++)
+	{
+		mavlink_local_position_ned_t pos = api.current_messages.local_position_ned;
+		printf("%i CURRENT POSITION XYZ = [ % .4f , % .4f , % .4f ] \n", i, pos.x, pos.y, pos.z);
+		sleep(1);
+	}
+
+	if(autotakeoff)
+	{
+		// Example 3 - Land using fixed velocity
+		set_velocity(  0.0       , // [m/s]
+					   0.0       , // [m/s]
+					   1.0       , // [m/s]
+					   sp        );
+
+		sp.type_mask |= MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_LAND;
+
+		// SEND THE COMMAND
+		api.update_setpoint(sp);
+		// NOW pixhawk will try to move
+
+		// Wait for 8 seconds, check position
+		for (int i=0; i < 8; i++)
+		{
+			mavlink_local_position_ned_t pos = api.current_messages.local_position_ned;
+			printf("%i CURRENT POSITION XYZ = [ % .4f , % .4f , % .4f ] \n", i, pos.x, pos.y, pos.z);
+			sleep(1);
+		}
+
+		printf("\n");
+
+		// disarm autopilot
+		api.arm_disarm(false);
+		usleep(100); // give some time to let it sink in
+	}
 
 	// --------------------------------------------------------------------------
 	//   STOP OFFBOARD MODE
@@ -276,11 +342,12 @@ commands(Autopilot_Interface &api)
 // ------------------------------------------------------------------------------
 // throws EXIT_FAILURE if could not open the port
 void
-parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
+parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate,
+		bool &use_udp, char *&udp_ip, int &rx_port, int &tx_port, bool &autotakeoff)
 {
 
 	// string for command line usage
-	const char *commandline_usage = "usage: mavlink_serial -d <devicename> -b <baudrate>";
+	const char *commandline_usage = "usage: mavlink_control [-d <devicename> -b <baudrate>] [-u <udp_ip> -r <rx_port> -t <tx_port>] [-a ]";
 
 	// Read input arguments
 	for (int i = 1; i < argc; i++) { // argv[0] is "mavlink"
@@ -294,8 +361,8 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 		// UART device ID
 		if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--device") == 0) {
 			if (argc > i + 1) {
-				uart_name = argv[i + 1];
-
+				i++;
+				uart_name = argv[i];
 			} else {
 				printf("%s\n",commandline_usage);
 				throw EXIT_FAILURE;
@@ -305,12 +372,51 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate)
 		// Baud rate
 		if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--baud") == 0) {
 			if (argc > i + 1) {
-				baudrate = atoi(argv[i + 1]);
-
+				i++;
+				baudrate = atoi(argv[i]);
 			} else {
 				printf("%s\n",commandline_usage);
 				throw EXIT_FAILURE;
 			}
+		}
+
+		// UDP ip
+		if (strcmp(argv[i], "-u") == 0 || strcmp(argv[i], "--udp_ip") == 0) {
+			if (argc > i + 1) {
+				i++;
+				udp_ip = argv[i];
+				use_udp = true;
+			} else {
+				printf("%s\n",commandline_usage);
+				throw EXIT_FAILURE;
+			}
+		}
+
+		// RX port
+		if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--rx_port") == 0) {
+			if (argc > i + 1) {
+				i++;
+				rx_port = atoi(argv[i]);
+			} else {
+				printf("%s\n",commandline_usage);
+				throw EXIT_FAILURE;
+			}
+		}
+
+		// TX port
+		if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--tx_port") == 0) {
+			if (argc > i + 1) {
+				i++;
+				tx_port = atoi(argv[i]);
+			} else {
+				printf("%s\n",commandline_usage);
+				throw EXIT_FAILURE;
+			}
+		}
+
+		// Autotakeoff
+		if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--autotakeoff") == 0) {
+			autotakeoff = true;
 		}
 
 	}
@@ -338,9 +444,9 @@ quit_handler( int sig )
 	}
 	catch (int error){}
 
-	// serial port
+	// port
 	try {
-		serial_port_quit->handle_quit(sig);
+		port_quit->stop();
 	}
 	catch (int error){}
 

@@ -1,7 +1,8 @@
 /****************************************************************************
  *
- *   Copyright (c) 2014 MAVlink Development Team. All rights reserved.
- *   Author: Trent Lukaczyk, <aerialhedgehog@gmail.com>
+ *   Copyright (c) 2018 MAVlink Development Team. All rights reserved.
+ *   Author: Hannes Diethelm, <hannes.diethelm@gmail.com>
+ *           Trent Lukaczyk, <aerialhedgehog@gmail.com>
  *           Jaycee Lock,    <jaycee.lock@gmail.com>
  *           Lorenz Meier,   <lm@inf.ethz.ch>
  *
@@ -35,111 +36,58 @@
  ****************************************************************************/
 
 /**
- * @file serial_port.h
+ * @file generic_port.h
  *
- * @brief Serial interface definition
+ * @brief Generic interface definition
  *
- * Functions for opening, closing, reading and writing via serial ports
+ * Abstract port definition
  *
+ * @author Hannes Diethelm, <hannes.diethelm@gmail.com>
  * @author Trent Lukaczyk, <aerialhedgehog@gmail.com>
  * @author Jaycee Lock,    <jaycee.lock@gmail.com>
  * @author Lorenz Meier,   <lm@inf.ethz.ch>
  *
  */
 
-#ifndef SERIAL_PORT_H_
-#define SERIAL_PORT_H_
+#ifndef GENERIC_PORT_H_
+#define GENERIC_PORT_H_
 
 // ------------------------------------------------------------------------------
 //   Includes
 // ------------------------------------------------------------------------------
 
-#include <cstdlib>
-#include <stdio.h>   // Standard input/output definitions
-#include <unistd.h>  // UNIX standard function definitions
-#include <fcntl.h>   // File control definitions
-#include <termios.h> // POSIX terminal control definitions
-#include <pthread.h> // This uses POSIX Threads
-#include <signal.h>
-
 #include <common/mavlink.h>
-
-#include "generic_port.h"
 
 // ------------------------------------------------------------------------------
 //   Defines
 // ------------------------------------------------------------------------------
 
-// The following two non-standard baudrates should have been defined by the system
-// If not, just fallback to number
-#ifndef B460800
-#define B460800 460800
-#endif
-
-#ifndef B921600
-#define B921600 921600
-#endif
-
 // ------------------------------------------------------------------------------
 //   Prototypes
 // ------------------------------------------------------------------------------
 
-//class Serial_Port;
-
-
-
 // ----------------------------------------------------------------------------------
-//   Serial Port Manager Class
+//   Generic Port Manager Class
 // ----------------------------------------------------------------------------------
 /*
- * Serial Port Class
+ * Generic Port Class
  *
- * This object handles the opening and closing of the offboard computer's
- * serial port over which we'll communicate.  It also has methods to write
- * a byte stream buffer.  MAVlink is not used in this object yet, it's just
- * a serialization interface.  To help with read and write pthreading, it
- * gaurds any port operation with a pthread mutex.
+ * This is an abstract port definition to handle both serial and UDP ports.
  */
-class Serial_Port: public Generic_Port
+class Generic_Port
 {
-
 public:
-
-	Serial_Port();
-	Serial_Port(const char *uart_name_, int baudrate_);
-	virtual ~Serial_Port();
-
-	int read_message(mavlink_message_t &message);
-	int write_message(const mavlink_message_t &message);
-
-	bool is_running(){
-		return is_open;
-	}
-	void start();
-	void stop();
-
-private:
-
-	int  fd;
-	mavlink_status_t lastStatus;
-	pthread_mutex_t  lock;
-
-	void initialize_defaults();
-
-	bool debug;
-	const char *uart_name;
-	int  baudrate;
-	bool is_open;
-
-	int  _open_port(const char* port);
-	bool _setup_port(int baud, int data_bits, int stop_bits, bool parity, bool hardware_control);
-	int  _read_port(uint8_t &cp);
-	int _write_port(char *buf, unsigned len);
-
+	Generic_Port(){};
+	virtual ~Generic_Port(){};
+	virtual int read_message(mavlink_message_t &message)=0;
+	virtual int write_message(const mavlink_message_t &message)=0;
+	virtual bool is_running()=0;
+	virtual void start()=0;
+	virtual void stop()=0;
 };
 
 
 
-#endif // SERIAL_PORT_H_
+#endif // GENERIC_PORT_H_
 
 

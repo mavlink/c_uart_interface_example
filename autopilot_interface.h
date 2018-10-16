@@ -55,11 +55,13 @@
 //   Includes
 // ------------------------------------------------------------------------------
 
-#include "serial_port.h"
+#include "generic_port.h"
 
 #include <signal.h>
 #include <time.h>
 #include <sys/time.h>
+#include <pthread.h> // This uses POSIX Threads
+#include <unistd.h>  // UNIX standard function definitions
 
 #include <common/mavlink.h>
 
@@ -109,6 +111,10 @@
 #define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_ANGLE    0b0000100111111111
 #define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_YAW_RATE     0b0000010111111111
 
+#define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_TAKEOFF      0x1000
+#define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_LAND         0x2000
+#define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_LOITER       0x3000
+#define MAVLINK_MSG_SET_POSITION_TARGET_LOCAL_NED_IDLE         0x4000
 
 // ------------------------------------------------------------------------------
 //   Prototypes
@@ -242,7 +248,7 @@ class Autopilot_Interface
 public:
 
 	Autopilot_Interface();
-	Autopilot_Interface(Serial_Port *serial_port_);
+	Autopilot_Interface(Generic_Port *port_);
 	~Autopilot_Interface();
 
 	char reading_status;
@@ -261,6 +267,7 @@ public:
 	void read_messages();
 	int  write_message(mavlink_message_t message);
 
+	int	 arm_disarm( bool flag );
 	void enable_offboard_control();
 	void disable_offboard_control();
 
@@ -275,7 +282,7 @@ public:
 
 private:
 
-	Serial_Port *serial_port;
+	Generic_Port *port;
 
 	bool time_to_exit;
 

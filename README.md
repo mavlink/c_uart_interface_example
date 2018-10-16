@@ -170,3 +170,12 @@ Past this, you can:
 - Modify the received message data type
 - Modify the sent message data type
 
+Simulation
+===========
+
+There is also the possibility to connect this example to the simulator using:
+
+```
+$ ./mavlink_control -u 127.0.0.1 -a
+```
+The -a argument enables arming, takeoff and landing of the copter. Use this argument with care on a real copter!
