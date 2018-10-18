@@ -97,7 +97,7 @@ initialize_defaults()
 	tx_port  = 14556;
 	is_open = false;
 	debug = false;
-	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	sock = -1;
 
 	// Start mutex
 	int result = pthread_mutex_init(&lock, NULL);
@@ -224,7 +224,16 @@ start()
 	// --------------------------------------------------------------------------
 	//   OPEN PORT
 	// --------------------------------------------------------------------------
-	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */
+
+	/* Create socket */
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock < 0)
+	{
+		perror("error socket failed");
+		throw EXIT_FAILURE;
+	}
+
+	/* Bind the socket to rx_port - necessary to receive packets */
 	memset(&rx_addr, 0, sizeof(rx_addr));
 	rx_addr.sin_family = AF_INET;
 	rx_addr.sin_addr.s_addr = INADDR_ANY;
@@ -234,12 +243,14 @@ start()
 	{
 		perror("error bind failed");
 		close(sock);
+		sock = -1;
 		throw EXIT_FAILURE;
 	}
 	/*if (fcntl(sock, F_SETFL, O_NONBLOCK | O_ASYNC) < 0)
 	{
 		fprintf(stderr, "error setting nonblocking: %s\n", strerror(errno));
 		close(sock);
+		sock = -1;
 		throw EXIT_FAILURE;
 	}*/
 
@@ -273,6 +284,7 @@ stop()
 	printf("CLOSE PORT\n");
 
 	int result = close(sock);
+	sock = -1;
 
 	if ( result )
 	{
