@@ -77,12 +77,11 @@ top (int argc, char **argv)
 
 	bool use_udp = false;
 	char *udp_ip = (char*)"127.0.0.1";
-	int rx_port = 14540;
-	int tx_port = 14557;
+	int udp_port = 14540;
 	bool autotakeoff = false;
 
 	// do the parse, will throw an int if it fails
-	parse_commandline(argc, argv, uart_name, baudrate, use_udp, udp_ip, rx_port, tx_port, autotakeoff);
+	parse_commandline(argc, argv, uart_name, baudrate, use_udp, udp_ip, udp_port, autotakeoff);
 
 
 	// --------------------------------------------------------------------------
@@ -102,7 +101,7 @@ top (int argc, char **argv)
 	Generic_Port *port;
 	if(use_udp)
 	{
-		port = new UDP_Port(udp_ip, rx_port, tx_port);
+		port = new UDP_Port(udp_ip, udp_port);
 	}
 	else
 	{
@@ -343,11 +342,11 @@ commands(Autopilot_Interface &api, bool autotakeoff)
 // throws EXIT_FAILURE if could not open the port
 void
 parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate,
-		bool &use_udp, char *&udp_ip, int &rx_port, int &tx_port, bool &autotakeoff)
+		bool &use_udp, char *&udp_ip, int &udp_port, bool &autotakeoff)
 {
 
 	// string for command line usage
-	const char *commandline_usage = "usage: mavlink_control [-d <devicename> -b <baudrate>] [-u <udp_ip> -r <rx_port> -t <tx_port>] [-a ]";
+	const char *commandline_usage = "usage: mavlink_control [-d <devicename> -b <baudrate>] [-u <udp_ip> -p <udp_port>] [-a ]";
 
 	// Read input arguments
 	for (int i = 1; i < argc; i++) { // argv[0] is "mavlink"
@@ -392,22 +391,11 @@ parse_commandline(int argc, char **argv, char *&uart_name, int &baudrate,
 			}
 		}
 
-		// RX port
-		if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--rx_port") == 0) {
+		// UDP port
+		if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--port") == 0) {
 			if (argc > i + 1) {
 				i++;
-				rx_port = atoi(argv[i]);
-			} else {
-				printf("%s\n",commandline_usage);
-				throw EXIT_FAILURE;
-			}
-		}
-
-		// TX port
-		if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--tx_port") == 0) {
-			if (argc > i + 1) {
-				i++;
-				tx_port = atoi(argv[i]);
+				udp_port = atoi(argv[i]);
 			} else {
 				printf("%s\n",commandline_usage);
 				throw EXIT_FAILURE;

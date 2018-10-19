@@ -103,7 +103,7 @@ class UDP_Port: public Generic_Port
 public:
 
 	UDP_Port();
-	UDP_Port(const char *target_ip_, int rx_port_, int tx_port_);
+	UDP_Port(const char *target_ip_, int udp_port_);
 	virtual ~UDP_Port();
 
 	int read_message(mavlink_message_t &message);
@@ -131,8 +131,6 @@ private:
 	int rx_port;
 	int tx_port;
 	int sock;
-	struct sockaddr_in rx_addr;
-	struct sockaddr_in tx_addr;
 	bool is_open;
 
 	int  _read_port(uint8_t &cp);

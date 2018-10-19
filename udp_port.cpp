@@ -65,12 +65,11 @@
 //   Con/De structors
 // ------------------------------------------------------------------------------
 UDP_Port::
-UDP_Port(const char *target_ip_, int rx_port_, int tx_port_)
+UDP_Port(const char *target_ip_, int udp_port_)
 {
 	initialize_defaults();
 	target_ip = target_ip_;
-	rx_port  = rx_port_;
-	tx_port  = tx_port_;
+	rx_port  = udp_port_;
 	is_open = false;
 }
 
@@ -94,7 +93,7 @@ initialize_defaults()
 	// Initialize attributes
 	target_ip = "127.0.0.1";
 	rx_port  = 14550;
-	tx_port  = 14556;
+	tx_port  = -1;
 	is_open = false;
 	debug = false;
 	sock = -1;
@@ -234,12 +233,13 @@ start()
 	}
 
 	/* Bind the socket to rx_port - necessary to receive packets */
-	memset(&rx_addr, 0, sizeof(rx_addr));
-	rx_addr.sin_family = AF_INET;
-	rx_addr.sin_addr.s_addr = INADDR_ANY;
-	rx_addr.sin_port = htons(rx_port);
+	struct sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = inet_addr(target_ip);;
+	addr.sin_port = htons(rx_port);
 
-	if (bind(sock, (struct sockaddr *) &rx_addr, sizeof(struct sockaddr)))
+	if (bind(sock, (struct sockaddr *) &addr, sizeof(struct sockaddr)))
 	{
 		perror("error bind failed");
 		close(sock);
@@ -254,15 +254,10 @@ start()
 		throw EXIT_FAILURE;
 	}*/
 
-	memset(&tx_addr, 0, sizeof(tx_addr));
-	tx_addr.sin_family = AF_INET;
-	tx_addr.sin_addr.s_addr = INADDR_ANY;
-	tx_addr.sin_port = htons(tx_port);
-
 	// --------------------------------------------------------------------------
 	//   CONNECTED!
 	// --------------------------------------------------------------------------
-	printf("Connected to %s rx:%i tx:%i\n", target_ip, rx_port, tx_port);
+	printf("Listening to %s:%i\n", target_ip, rx_port);
 	lastStatus.packet_rx_drop_count = 0;
 
 	is_open = true;
@@ -316,8 +311,17 @@ _read_port(uint8_t &cp)
 		buff_ptr++;
 		result=1;
 	}else{
-		len=sizeof(struct sockaddr_in);
-		result = recvfrom(sock, &buff, BUFF_LEN, 0, (struct sockaddr *)&rx_addr, &len);
+		struct sockaddr_in addr;
+		len = sizeof(struct sockaddr_in);
+		result = recvfrom(sock, &buff, BUFF_LEN, 0, (struct sockaddr *)&addr, &len);
+		if(tx_port < 0){
+			if(strcmp(inet_ntoa(addr.sin_addr), target_ip) == 0){
+				tx_port = ntohs(addr.sin_port);
+				printf("Got first packet, sending to %s:%i\n", target_ip, rx_port);
+			}else{
+				printf("ERROR: Got packet from %s:%i but listening on %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), target_ip);
+			}
+		}
 		if(result > 0){
 			buff_len=result;
 			buff_ptr=0;
@@ -346,8 +350,19 @@ _write_port(char *buf, unsigned len)
 	pthread_mutex_lock(&lock);
 
 	// Write packet via UDP link
-	const int bytesWritten = sendto(sock, buf, len, 0, (struct sockaddr*)&tx_addr, sizeof(struct sockaddr_in));
-	//printf("sendto: %i\n", bytesWritten);
+	int bytesWritten = 0;
+	if(tx_port > 0){
+		struct sockaddr_in addr;
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = inet_addr(target_ip);
+		addr.sin_port = htons(tx_port);
+		bytesWritten = sendto(sock, buf, len, 0, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));
+		//printf("sendto: %i\n", bytesWritten);
+	}else{
+		printf("ERROR: Sending before first packet received!\n");
+		bytesWritten = -1;
+	}
 
 	// Unlock
 	pthread_mutex_unlock(&lock);
