@@ -62,6 +62,7 @@
 #include <sys/time.h>
 #include <pthread.h> // This uses POSIX Threads
 #include <unistd.h>  // UNIX standard function definitions
+#include <mutex>
 
 #include <common/mavlink.h>
 
@@ -289,7 +290,10 @@ private:
 	pthread_t read_tid;
 	pthread_t write_tid;
 
-	mavlink_set_position_target_local_ned_t current_setpoint;
+	struct {
+		std::mutex mutex;
+		mavlink_set_position_target_local_ned_t data;
+	} current_setpoint;
 
 	void read_thread();
 	void write_thread(void);
