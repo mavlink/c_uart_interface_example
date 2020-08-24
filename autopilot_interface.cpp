@@ -223,7 +223,8 @@ void
 Autopilot_Interface::
 update_setpoint(mavlink_set_position_target_local_ned_t setpoint)
 {
-	current_setpoint = setpoint;
+	std::lock_guard<std::mutex> lock(current_setpoint.mutex);
+	current_setpoint.data = setpoint;
 }
 
 
